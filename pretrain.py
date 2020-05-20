@@ -97,13 +97,18 @@ def main(args):
 
 
 def train(loader, model, criterion, optimizer):
+    count = 0
     for i, data in enumerate(loader, 0):
         img, label = data
+        img, label = img.cuda(), label.cuda()
         optimizer.zero_grad()
         output = model(img)
         loss = criterion(output, label)
         loss.backward()
         optimizer.step()
+        count += 1
+        if not (count % 1000):
+            print("training after %i batches with loss %.3f\n" % (count, loss))
     return loss.item()
 
 
@@ -115,6 +120,7 @@ def validate(loader, model, criterion):
     with torch.no_grad():
         for data in loader:
             images, labels = data
+            images, labels = images.cuda(), lables.cuda()
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
