@@ -73,7 +73,7 @@ def main(args):
     train_losses = []
     val_losses = []
     val_accs = []
-    for epoch in range(5):
+    for epoch in range(25):
         train_loss = train(train_loader, model, criterion, optimizer, logger)
         train_losses.append(train_loss)
         val_loss, val_acc = validate(val_loader, model, criterion, logger)
