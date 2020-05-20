@@ -102,11 +102,7 @@ def train(loader, model, criterion, optimizer):
     count = 0
     for i, data in enumerate(loader, 0):
         img, label = data
-<<<<<<< HEAD
         img, label = img.cuda(), label.cuda()
-=======
-        # img, label = img.cuda(), label.cuda()
->>>>>>> 17a60e62aeb78a9b5d6a52bdb2eb46756d71022b
         optimizer.zero_grad()
         output = model(img)
         loss = criterion(output, label)
@@ -129,11 +125,7 @@ def validate(loader, model, criterion):
     with torch.no_grad():
         for data in loader:
             images, labels = data
-<<<<<<< HEAD
             images, labels = images.cuda(), labels.cuda()
-=======
-            # images, labels = images.cuda(), lables.cuda()
->>>>>>> 17a60e62aeb78a9b5d6a52bdb2eb46756d71022b
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
