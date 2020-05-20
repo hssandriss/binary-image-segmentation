@@ -84,28 +84,41 @@ def main(args):
         # save model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), "./{}/task_1_{}_epoch_{}.pth".format(args.output_root, args.exp_suffix, epoch))
+            torch.save(model.state_dict(), "{}/task_1_{}_epoch_{}.pth".format(args.model_folder, args.exp_name, epoch))
     # Saving plots
     fig = plt.figure()
     plt.plot(np.arange(len(train_losses)), np.array([train_losses]).squeeze(), 'r', label="Training loss")
-    plt.plot(np.arange(len(train_losses)), np.array([val_losses]).squeeze(), 'g', label="Validation loss")
+    plt.plot(np.arange(len(val_losses)), np.array([val_losses]).squeeze(), 'g', label="Validation loss")
     plt.legend(loc="upper right")
     plt.ylim(-1, 100)
-    fig.savefig('{}/task_1_{}.png'.format(args.output_root, args.exp_suffix), dpi=300)
+    fig.savefig('{}/task_1_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
 
 # train one epoch over the whole training dataset. You can change the method's signature.
 
 
 def train(loader, model, criterion, optimizer):
+    epoch_loss = 0
+    running_loss = 0
+    count = 0
     for i, data in enumerate(loader, 0):
         img, label = data
+<<<<<<< HEAD
         img, label = img.cuda(), label.cuda()
+=======
+        # img, label = img.cuda(), label.cuda()
+>>>>>>> 17a60e62aeb78a9b5d6a52bdb2eb46756d71022b
         optimizer.zero_grad()
         output = model(img)
         loss = criterion(output, label)
+        epoch_loss += loss
+        count += label.size(0)
+        running_loss += loss
         loss.backward()
         optimizer.step()
-    return loss.item()
+        if not (i % 1000):
+            print("training after %i batches with loss %.3f\n" % (i, running_loss / 1000))
+            running_loss = 0
+    return epoch_loss / count
 
 
 # validation function. you can change the method's signature.
@@ -116,13 +129,17 @@ def validate(loader, model, criterion):
     with torch.no_grad():
         for data in loader:
             images, labels = data
+<<<<<<< HEAD
             images, labels = images.cuda(), labels.cuda()
+=======
+            # images, labels = images.cuda(), lables.cuda()
+>>>>>>> 17a60e62aeb78a9b5d6a52bdb2eb46756d71022b
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    return loss, (100 * correct / total)
+            correct += (predicted == labels).item()
+    return loss/total, (100 * correct / total)
 
 
 if __name__ == '__main__':
