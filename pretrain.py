@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from pprint import pprint
 from data.pretraining import DataReaderPlainImg, custom_collate
 from data.transforms import get_transforms_pretraining
@@ -61,8 +62,10 @@ def main(args):
 
     # TODO: loss function
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
-
+    # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
+    
     expdata = "  \n".join(["{} = {}".format(k, v) for k, v in vars(args).items()])
     logger.info(expdata)
     logger.info('train_data {}'.format(train_data.__len__()))
@@ -74,7 +77,7 @@ def main(args):
     val_losses = []
     val_accs = []
     for epoch in range(25):
-        train_loss = train(train_loader, model, criterion, optimizer, logger)
+        train_loss = train(train_loader, model, criterion, optimizer, scheduler, epoch, logger)
         train_losses.append(train_loss)
         val_loss, val_acc = validate(val_loader, model, criterion, logger)
         val_losses.append(val_loss)
@@ -110,11 +113,12 @@ def main(args):
 
 
 # train one epoch over the whole training dataset. You can change the method's signature.
-def train(loader, model, criterion, optimizer, logger):
+def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
     model.train()
     epoch_loss = 0
     running_loss = 0
     count = 0
+    iters = len(loader)
     for i, data in enumerate(loader, 0):
         img, label = data
         img, label = img.cuda(), label.cuda()
@@ -126,8 +130,9 @@ def train(loader, model, criterion, optimizer, logger):
         running_loss += loss
         loss.backward()
         optimizer.step()
+        scheduler.step(epoch + i / iters)
         if (i % 100 == 99):
-            logger.info("training iter %i with loss %.5f" % (i + 1, running_loss / 100))
+            logger.info("Epoch %i training iter %i with loss %.5f" % (epoch, i + 1, running_loss / 100))
             # print("training %i - loss %.5f" % ( i+1, running_loss / 1000))
             running_loss = 0
     return epoch_loss / count
@@ -141,7 +146,7 @@ def validate(loader, model, criterion, logger):
     with torch.no_grad():
         for data in loader:
             images, labels = data
-            # images, labels = images.cuda(), labels.cuda()
+            images, labels = images.cuda(), labels.cuda()
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
