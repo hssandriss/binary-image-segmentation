@@ -43,7 +43,6 @@ def parse_arguments():
 def main(args):
     # Logging to the file and stdout
     logger = get_logger(args.output_folder, args.exp_name)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('this is my device: ', device)
     # build model and load weights
@@ -75,28 +74,44 @@ def main(args):
     val_losses = []
     val_accs = []
     for epoch in range(5):
-        train_loss = train(train_loader, model, criterion, optimizer)
+        train_loss = train(train_loader, model, criterion, optimizer, logger)
         train_losses.append(train_loss)
-        val_loss, val_acc = validate(val_loader, model, criterion)
+        val_loss, val_acc = validate(val_loader, model, criterion, logger)
         val_losses.append(val_loss)
         val_accs.append(val_acc)
-        print("Epoch %d  train_loss %.3f val_loss: %.3f val_acc: %.3f \n" % (epoch, train_loss, val_loss, val_acc))
+        logger.info("----------------------------------------------------------")
+        logger.info("Epoch %d  train_loss %.3f val_loss: %.3f val_acc: %.3f" %
+                    (epoch, train_loss, val_loss, val_acc))
+        logger.info("----------------------------------------------------------")
+        # print("Epoch %d  train_loss %.3f val_loss: %.3f val_acc: %.3f \n" % (epoch, train_loss, val_loss, val_acc))
         # save model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            logger.info("saving weights...")
             torch.save(model.state_dict(), "{}/task_1_{}_epoch_{}.pth".format(args.model_folder, args.exp_name, epoch))
+    
+    # Saving csv
+    logger.info("saving results to csv...")
+    np.save('{}/train_loss{}.npy'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze())
+    np.save('{}/val_loss_{}.npy'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze())
+    np.save('{}/val_acc_{}.npy'.format(args.model_folder, args.exp_name), np.array([val_accs]).squeeze())
+
     # Saving plots
+    logger.info("saving results to png...")
     fig = plt.figure()
     plt.plot(np.arange(len(train_losses)), np.array([train_losses]).squeeze(), 'r', label="Training loss")
     plt.plot(np.arange(len(val_losses)), np.array([val_losses]).squeeze(), 'g', label="Validation loss")
     plt.legend(loc="upper right")
-    plt.ylim(-1, 100)
+    plt.xlabel("epoch")
+    plt.xlabel("average loss")
+    plt.ylim(-1, 3)
+    plt.title("Validation and training losses")
     fig.savefig('{}/task_1_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
 
+
 # train one epoch over the whole training dataset. You can change the method's signature.
-
-
-def train(loader, model, criterion, optimizer):
+def train(loader, model, criterion, optimizer, logger):
+    model.train()
     epoch_loss = 0
     running_loss = 0
     count = 0
@@ -111,27 +126,28 @@ def train(loader, model, criterion, optimizer):
         running_loss += loss
         loss.backward()
         optimizer.step()
-        if not (i % 1000):
-            print("training after %i batches with loss %.3f\n" % (i, running_loss / 1000))
+        if (i % 100 == 99):
+            logger.info("training iter %i with loss %.5f" % (i + 1, running_loss / 100))
+            # print("training %i - loss %.5f" % ( i+1, running_loss / 1000))
             running_loss = 0
     return epoch_loss / count
 
 
 # validation function. you can change the method's signature.
-def validate(loader, model, criterion):
+def validate(loader, model, criterion, logger):
     correct = 0
     total = 0
     loss = 0
     with torch.no_grad():
         for data in loader:
             images, labels = data
-            # images, labels = images.cuda(), lables.cuda()
+            # images, labels = images.cuda(), labels.cuda()
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
             total += labels.size(0)
-            correct += (predicted == labels).item()
-    return loss/total, (100 * correct / total)
+            correct += (predicted == labels).sum().item()
+    return loss / total, (100 * correct / total)
 
 
 if __name__ == '__main__':
