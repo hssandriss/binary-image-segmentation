@@ -74,7 +74,7 @@ def main(args):
     train_losses = []
     val_losses = []
     val_accs = []
-    for epoch in range(5):
+    for epoch in range(50):
         train_loss = train(train_loader, model, criterion, optimizer)
         train_losses.append(train_loss)
         val_loss, val_acc = validate(val_loader, model, criterion)
@@ -99,6 +99,7 @@ def main(args):
 def train(loader, model, criterion, optimizer):
     for i, data in enumerate(loader, 0):
         img, label = data
+        img, label = img.cuda(), label.cuda()
         optimizer.zero_grad()
         output = model(img)
         loss = criterion(output, label)
@@ -115,6 +116,7 @@ def validate(loader, model, criterion):
     with torch.no_grad():
         for data in loader:
             images, labels = data
+            images, labels = images.cuda(), labels.cuda()
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
