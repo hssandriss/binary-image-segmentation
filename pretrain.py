@@ -108,7 +108,7 @@ def main(args):
     plt.xlabel("epoch")
     plt.xlabel("average loss")
     plt.ylim(-1, 3)
-    plt.title("Validation and training losses")
+    plt.title("Validation and training losses on the pretraining")
     fig.savefig('{}/task_1_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
 
 
