@@ -1,16 +1,19 @@
 import os
+from shutil import copyfile
 import random
 import argparse
 import torch
 from pprint import pprint
 from torchvision.transforms import *
-from utils import check_dir
+from torchvision.utils import save_image
+from utils import check_dir, get_logger
 from models.pretraining_backbone import ResNet18Backbone
-from data.pretraining import DataReaderPlainImg
+from data.pretraining import DataReaderPlainImg, custom_collate
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument('data_folder', type=str, help="folder containing the data (crops)")
     parser.add_argument('--weights-init', type=str,
                         default="")
     parser.add_argument("--size", type=int, default=256, help="size of the images to feed the network")
@@ -26,13 +29,21 @@ def parse_arguments():
 
 
 def main(args):
+    logger = get_logger(args.output_folder, "KNN")
+    data_root = args.data_folder
     # model
-    raise NotImplementedError("TODO: build model and load weights snapshot")
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('this is my device: ', device)
+    # build model and load weights
+    model = ResNet18Backbone(pretrained=False).to(device)
+    # TODO: load weight initialization"
+    model.load_state_dict(torch.load(args.weights_init, map_location=device), strict=False)
     # dataset
     val_transform = Compose([Resize(args.size), CenterCrop((args.size, args.size)), ToTensor()])
-    raise NotImplementedError("Load the validation dataset (crops), use the transform above.")
-
+    # TODO; Load the validation dataset (crops), use the transform above.
+    val_data = DataReaderPlainImg(os.path.join(data_root, str(args.size), "val"), transform=val_transform)
+    val_loader = torch.utils.data.DataLoader(val_data, batch_size=1, shuffle=False, num_workers=2,
+                                             pin_memory=True, drop_last=True, collate_fn=custom_collate)
     # choose/sample which images you want to compute the NNs of.
     # You can try different ones and pick the most interesting ones.
     query_indices = []
@@ -42,7 +53,12 @@ def main(args):
             continue
         print("Computing NNs for sample {}".format(idx))
         closest_idx, closest_dist = find_nn(model, img, val_loader, 5)
-        raise NotImplementedError("TODO: retrieve the original NN images, save them and log the results.")
+        # TODO: retrieve the original NN images, save them and log the results."
+        logger.info("distances to the closest images are %s " % (str(closest_dist.tolist())))
+        logger.info("indices of closest images are %s " % (str(closest_idx.tolist())))
+        for nn_idx in closest_idx.tolist():
+            copyfile("%s/%s.jpg" % (data_root, nn_idx), "%s/%s/nn_img_%s.jpg" % (args.output_folder, idx, nn_idx))
+        copyfile("%s/%s.jpg" % (data_root, idx), "%s/%s/sample_img_%s.jpg" % (args.output_folder, idx, idx))
 
 
 def find_nn(model, query_img, loader, k):
@@ -57,8 +73,16 @@ def find_nn(model, query_img, loader, k):
         closest_idx: the indices of the NNs in the dataset, for retrieving the images
         closest_dist: the L2 distance of each NN to the features of the query image
     """
-    raise NotImplementedError("TODO: nearest neighbors retrieval")
-    # return closest_idx, closest_dist
+    # TODO: nearest neighbors retrieval
+    distances = torch.FloatTensor()
+    f_rep = model(query_img)
+    for i, data in enumerate(loader):
+        image, _ = data
+        f_rep_i = model(image)
+        dist = ((f_rep - f_rep_i) ** 2).sum(-1)
+        distances = torch.cat((distances, dist))
+    closest_dist, closest_idx = distances.topk(k)
+    return closest_idx, closest_dist
 
 
 if __name__ == '__main__':
