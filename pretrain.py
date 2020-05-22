@@ -124,7 +124,7 @@ def train(loader, model, criterion, optimizer, epoch, logger):
         img, label = img.cuda(), label.cuda()
         optimizer.zero_grad()
         output = model(img)
-        loss = criterion(output, label)
+        loss = criterion(output, label).mean()
         epoch_loss += loss
         count += 1
         running_loss += loss
@@ -145,15 +145,16 @@ def validate(loader, model, criterion, logger):
     total = 0
     loss = 0
     with torch.no_grad():
-        for _, data in enumerate(loader):
+        for iter, data in enumerate(loader):
             images, labels = data
             images, labels = images.cuda(), labels.cuda()
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
-            loss += criterion(outputs, labels)
+            loss += criterion(outputs, labels).lmean()
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    return loss / total, (100 * correct / total)
+            correct += accuracy(predicted, labels)
+            # correct += (predicted == labels).sum().item()
+    return loss / total, (correct / iter+1 + 1)
 
 
 if __name__ == '__main__':
