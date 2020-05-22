@@ -120,7 +120,7 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
     epoch_loss = 0.
     running_loss = 0.
     count = 0
-    # iters = len(loader)
+    iters = len(loader)
     for i, data in enumerate(loader, 0):
         img, label = data
         img, label = img.cuda(), label.cuda()
