@@ -124,7 +124,7 @@ def train(loader, model, criterion, optimizer, epoch, logger):
     for i, data in enumerate(loader, 0):
         img, label = data
         img, label = img.cuda(), label.cuda()
-        output = model(img.float())
+        output = model(img)
         loss = criterion(output, label).mean().item()
         epoch_loss += loss
         count += 1
@@ -150,7 +150,7 @@ def validate(loader, model, criterion, logger):
         for iter, data in enumerate(loader, 0):
             images, labels = data
             images, labels = images.cuda(), labels.cuda()
-            outputs = model(images.float())
+            outputs = model(images)
             # _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels).mean().item()
             total += 1
