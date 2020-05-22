@@ -126,7 +126,7 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
         output = model(img)
         loss = criterion(output, label)
         epoch_loss += loss
-        count += label.size(0)
+        count += 1
         running_loss += loss
         loss.backward()
         optimizer.step()
@@ -151,7 +151,7 @@ def validate(loader, model, criterion, logger):
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
-            total += labels.size(0)
+            total += 1
             correct += (predicted == labels).sum().item()
     return loss / total, (100 * correct / total)
 
