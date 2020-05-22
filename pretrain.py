@@ -150,7 +150,7 @@ def validate(loader, model, criterion, logger):
             images, labels = images.cuda(), labels.cuda()
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
-            loss += criterion(outputs, labels).lmean()
+            loss += criterion(outputs, labels).mean()
             total += 1
             correct += accuracy(predicted, labels)
             # correct += (predicted == labels).sum().item()
