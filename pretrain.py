@@ -115,7 +115,7 @@ def main(args):
 
 
 # train one epoch over the whole training dataset. You can change the method's signature.
-def train(loader, model, criterion, optimizer, epoch, logger):
+def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
     model.train()
     epoch_loss = 0.
     running_loss = 0.
