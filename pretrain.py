@@ -125,10 +125,10 @@ def train(loader, model, criterion, optimizer, epoch, logger):
         img, label = data
         img, label = img.cuda(), label.cuda()
         output = model(img)
-        loss = criterion(output, label).mean().item()
-        epoch_loss += loss
+        loss = criterion(output, label).mean()
+        epoch_loss += loss.item()
         count += 1
-        running_loss += loss
+        running_loss += loss.item()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
