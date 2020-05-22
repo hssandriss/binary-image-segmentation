@@ -37,7 +37,7 @@ def main(args):
     # build model and load weights
     model = ResNet18Backbone(pretrained=False).to(device)
     # TODO: load weight initialization"
-    model.load_state_dict(torch.load(args.weights_init, map_location=device), strict=False)
+    model.load_state_dict(torch.load(args.weights_init, map_location=device)['model'])
     # dataset
     val_transform = Compose([Resize(args.size), CenterCrop((args.size, args.size)), ToTensor()])
     # TODO; Load the validation dataset (crops), use the transform above.
@@ -46,9 +46,10 @@ def main(args):
                                              pin_memory=True, drop_last=True, collate_fn=custom_collate)
     # choose/sample which images you want to compute the NNs of.
     # You can try different ones and pick the most interesting ones.
-    query_indices = []
+    query_indices = [2]
     nns = []
-    for idx, img in enumerate(val_loader):
+
+    for idx, img in enumerate(val_loader.dataset):
         if idx not in query_indices:
             continue
         print("Computing NNs for sample {}".format(idx))
@@ -57,8 +58,8 @@ def main(args):
         logger.info("distances to the closest images are %s " % (str(closest_dist.tolist())))
         logger.info("indices of closest images are %s " % (str(closest_idx.tolist())))
         for nn_idx in closest_idx.tolist():
-            copyfile("%s/%s.jpg" % (data_root, nn_idx), "%s/%s/nn_img_%s.jpg" % (args.output_folder, idx, nn_idx))
-        copyfile("%s/%s.jpg" % (data_root, idx), "%s/%s/sample_img_%s.jpg" % (args.output_folder, idx, idx))
+            save_image(val_loader.dataset[nn_idx], "%s/%i/nn_img_%i.jpg" % (args.output_folder, idx, nn_idx) )
+        save_image(img, "%s/%i/sample_img_%i.jpg" % (args.output_folder, idx, idx))
 
 
 def find_nn(model, query_img, loader, k):
@@ -74,11 +75,10 @@ def find_nn(model, query_img, loader, k):
         closest_dist: the L2 distance of each NN to the features of the query image
     """
     # TODO: nearest neighbors retrieval
-    distances = torch.FloatTensor()
-    f_rep = model(query_img)
-    for i, data in enumerate(loader):
-        image, _ = data
-        f_rep_i = model(image)
+    distances = torch.FloatTensor().cuda()
+    f_rep = model(query_img.unsqueeze(0).cuda())
+    for i, image in enumerate(loader.dataset):
+        f_rep_i = model(image.unsqueeze(0).cuda())
         dist = ((f_rep - f_rep_i) ** 2).sum(-1)
         distances = torch.cat((distances, dist))
     closest_dist, closest_idx = distances.topk(k)

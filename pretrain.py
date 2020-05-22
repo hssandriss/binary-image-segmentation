@@ -49,7 +49,7 @@ def main(args):
     # build model and load weights
     model = ResNet18Backbone(pretrained=False).to(device)
     # TODO: load weight initialization"
-    model.load_state_dict(torch.load(args.weights_init, map_location=device), strict=False)
+    model.load_state_dict(torch.load(args.weights_init, map_location=device)['model'])
     # load dataset
     data_root = args.data_folder
     train_transform, val_transform = get_transforms_pretraining(args)
@@ -140,6 +140,7 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
 
 # validation function. you can change the method's signature.
 def validate(loader, model, criterion, logger):
+    model.eval()
     correct = 0
     total = 0
     loss = 0

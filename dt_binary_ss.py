@@ -50,8 +50,8 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('this is my device: ', device)
     # model
-    pretrained_model = ResNet18Backbone(pretrained=True).to(device)
-    pretrained_model.load_state_dict(torch.load(args.weights_init, map_location=device), strict=False)
+    pretrained_model = ResNet18Backbone(pretrained=False).to(device)
+    pretrained_model.load_state_dict(torch.load(args.weights_init, map_location=device)['model'])
     model = Segmentator(2, pretrained_model.features, img_size).cuda()
 
     # dataset
@@ -138,36 +138,41 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
     count = 0
     iters = len(loader)
     for i, data in enumerate(loader):
-        if i ==600:
-            break;
+        if i ==5:
+            break
         images, labels = data[0].cuda(), data[1].cuda()
         optimizer.zero_grad()
         outputs = model(images)
-        labels = labels.squeeze() * 255
-        loss = criterion(outputs, labels.long())
+        labels = (labels.squeeze() * 255).long()
+        loss = criterion(outputs, labels)
+        epoch_loss += loss
+        count += labels.size(0)
+        running_loss += loss
         loss.backward()
-        count += 1
         optimizer.step()
         scheduler.step(epoch + i / iters)
         if (i % 100 == 99):
-            logger.info("Epoch %i training iter %i with loss %f" % (epoch + 1, i + 1, running_loss / 100))
+            logger.info("Epoch %i training iter %i with loss %f" % 
+                        (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0
     return epoch_loss / count
 
 
 def validate(loader, model, criterion, logger, epoch=0):
     # TODO: validation routine
+    model.eval()
     val_loss = 0
     iou = 0
     total = 0
     with torch.no_grad():
-        for data in loader:
+        for _, data in enumerate(loader):
             image, label = data[0].cuda(), data[1].cuda()
             output = model(image)
-            labels = labels.squeeze() * 255
-            loss += criterion(output, label.long())
-            output = torch.argmax(output, 1)
-            label = label.float()
+            label = label * 255
+            label = torch.nn.functional.interpolate(label, (output.shape[2], output.shape[3]))
+            label = label.squeeze(1)
+            loss = criterion(output, label.long())
+            val_loss += loss
             total += label.size(0)
             iou += mIoU(output, label)
     return loss / total, (100 * iou / total)
