@@ -151,10 +151,10 @@ def validate(loader, model, criterion, logger):
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels).lmean()
-            total += labels.size(0)
+            total += 1
             correct += accuracy(predicted, labels)
             # correct += (predicted == labels).sum().item()
-    return loss / total, (correct / iter+1 + 1)
+    return loss / total, (correct / total)
 
 
 if __name__ == '__main__':
