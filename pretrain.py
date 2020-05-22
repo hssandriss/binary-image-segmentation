@@ -115,10 +115,10 @@ def main(args):
 # train one epoch over the whole training dataset. You can change the method's signature.
 def train(loader, model, criterion, optimizer, epoch, logger):
     model.train()
-    epoch_loss = 0
-    running_loss = 0
+    epoch_loss = 0.
+    running_loss = 0.
     count = 0
-    iters = len(loader)
+    # iters = len(loader)
     for i, data in enumerate(loader):
         img, label = data
         img, label = img.cuda(), label.cuda()
@@ -134,7 +134,7 @@ def train(loader, model, criterion, optimizer, epoch, logger):
         if (i % 100 == 99):
             logger.info("Epoch %i training iter %i with loss %.5f" % (epoch, i + 1, running_loss / 100))
             # print("training %i - loss %.5f" % ( i+1, running_loss / 1000))
-            running_loss = 0
+            running_loss = 0.
     return epoch_loss / count
 
 
@@ -143,7 +143,7 @@ def validate(loader, model, criterion, logger):
     model.eval()
     correct = 0
     total = 0
-    loss = 0
+    loss = 0.
     with torch.no_grad():
         for iter, data in enumerate(loader):
             images, labels = data
