@@ -49,21 +49,23 @@ def main(args):
     # build model and load weights
     model = ResNet18Backbone(pretrained=False).to(device)
     # TODO: load weight initialization"
-    model.load_state_dict(torch.load(args.weights_init, map_location=device)['model'])
+    print(args.weights_init)
+    chkpoint = torch.load(args.weights_init, map_location=device)
+    model.load_state_dict(chkpoint['model'], strict=False)
     # load dataset
     data_root = args.data_folder
     train_transform, val_transform = get_transforms_pretraining(args)
     train_data = DataReaderPlainImg(os.path.join(data_root, str(args.size), "train"), transform=train_transform)
     val_data = DataReaderPlainImg(os.path.join(data_root, str(args.size), "val"), transform=val_transform)
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.bs, shuffle=True, num_workers=2,
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.bs, shuffle=False, num_workers=2,
                                                pin_memory=True, drop_last=True, collate_fn=custom_collate)
     val_loader = torch.utils.data.DataLoader(val_data, batch_size=1, shuffle=False, num_workers=2,
                                              pin_memory=True, drop_last=True, collate_fn=custom_collate)
 
     # TODO: loss function
     criterion = nn.CrossEntropyLoss()
-    # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     # scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
     
     expdata = "  \n".join(["{} = {}".format(k, v) for k, v in vars(args).items()])
@@ -119,15 +121,15 @@ def train(loader, model, criterion, optimizer, epoch, logger):
     running_loss = 0.
     count = 0
     # iters = len(loader)
-    for i, data in enumerate(loader):
+    for i, data in enumerate(loader, 0):
         img, label = data
         img, label = img.cuda(), label.cuda()
-        optimizer.zero_grad()
-        output = model(img)
-        loss = criterion(output, label).mean()
+        output = model(img.float())
+        loss = criterion(output, label).mean().item()
         epoch_loss += loss
         count += 1
         running_loss += loss
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         # scheduler.step(epoch + i / iters)
@@ -140,19 +142,19 @@ def train(loader, model, criterion, optimizer, epoch, logger):
 
 # validation function. you can change the method's signature.
 def validate(loader, model, criterion, logger):
-    model.eval()
+    # model.eval()
     correct = 0
     total = 0
     loss = 0.
     with torch.no_grad():
-        for iter, data in enumerate(loader):
+        for iter, data in enumerate(loader, 0):
             images, labels = data
             images, labels = images.cuda(), labels.cuda()
-            outputs = model(images)
+            outputs = model(images.float())
             # _, predicted = torch.max(outputs.data, 1)
-            loss += criterion(outputs, labels).mean()
+            loss += criterion(outputs, labels).mean().item()
             total += 1
-            correct += sum(accuracy(outputs, labels))
+            correct += accuracy(outputs, labels)[0].item()
             # correct += (predicted == labels).sum().item()
     return loss / total, (correct / total)
 
