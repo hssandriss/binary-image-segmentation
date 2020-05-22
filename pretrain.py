@@ -145,13 +145,13 @@ def validate(loader, model, criterion, logger):
     total = 0
     loss = 0
     with torch.no_grad():
-        for data in loader:
+        for _, data in enumerate(loader):
             images, labels = data
             images, labels = images.cuda(), labels.cuda()
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels)
-            total += 1
+            total += labels.size(0)
             correct += (predicted == labels).sum().item()
     return loss / total, (100 * correct / total)
 
