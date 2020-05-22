@@ -79,6 +79,7 @@ def find_nn(model, query_img, loader, k):
     f_rep = model(query_img.unsqueeze(0).cuda())
     for i, image in enumerate(loader.dataset):
         f_rep_i = model(image.unsqueeze(0).cuda())
+        # dist = torch.norm((f_rep - f_rep_i), 2)
         dist = ((f_rep - f_rep_i) ** 2).sum(-1)
         distances = torch.cat((distances, dist))
     closest_dist, closest_idx = distances.topk(k)
