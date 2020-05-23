@@ -78,8 +78,9 @@ def main(args):
     # TODO: loss ()
     criterion = torch.nn.CrossEntropyLoss()
     # TODO: SGD optimizer (see pretraining)
-    optimizer = optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
+    # optimizer = optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    # scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
     # TODO: loss function and SGD optimizer"
 
     expdata = "  \n".join(["{} = {}".format(k, v) for k, v in vars(args).items()])
@@ -96,25 +97,32 @@ def main(args):
     val_iou = []
     for epoch in range(1):
         logger.info("Epoch {}".format(epoch))
-        train_loss = train(train_loader, model, criterion, optimizer, scheduler, epoch, logger)
+        train_loss = train(train_loader, model, criterion, optimizer, epoch, logger)
         train_losses.append(train_loss)
-        val_results = validate(val_loader, model, criterion, logger, epoch)
-        val_losses.append(val_results[0])
-        val_iou.append(val_results[1])
-        if (val_results[0] < best_val_loss) and (val_results[1] > best_val_miou):
-            best_val_loss = val_results[0]
-            best_val_miou = val_results[1]
+        val_loss, val_miou = validate(val_loader, model, criterion, logger, epoch)
+        val_losses.append(val_loss)
+        val_iou.append(val_miou)
+        logger.info("----------------------------------------------------------")
+        logger.info("Epoch %d  train_loss %.3f val_loss: %.3f val_acc: %.3f" %
+                    (epoch, train_loss, val_loss, val_miou))
+        logger.info("----------------------------------------------------------")
+        
+        if (val_loss < best_val_loss):
+            best_val_loss = val_loss
+            save_model(model, optimizer, args.model_folder,epoch, val_loss, val_iou, logger, best=True)
+        elif (val_miou > best_val_miou):
+            best_val_miou  = best_val_miou
             logger.info("saving weights...")
-            torch.save(model.state_dict(), "{}/task_1_seg_{}_epoch_{}_best.pth".format(args.model_folder, args.exp_name, epoch))
+            save_model(model, optimizer, args ,epoch, val_loss, val_iou, logger, best=True)
         else:
             logger.info("saving weights...")
-            torch.save(model.state_dict(), "{}/task_1_seg_{}_epoch_{}.pth".format(args.model_folder, args.exp_name, epoch))
+            save_model(model, optimizer, args,epoch, val_loss, val_iou, logger, best=False)
 
-    # Saving csv
-    logger.info("saving results to csv...")
-    np.save('{}/train_seg_loss{}.npy'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze())
-    np.save('{}/val_seg_loss_{}.npy'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze())
-    np.save('{}/val_seg_iou_{}.npy'.format(args.model_folder, args.exp_name), np.array([val_iou]).squeeze())
+        # Saving csv
+        logger.info("saving results to csv...")
+        np.save('{}/train_seg_loss_{}_epoch_{}.npy'.format(args.model_folder, args.exp_name, epoch), np.array([train_losses]).squeeze())
+        np.save('{}/val_seg_loss_{}_epoch_{}.npy'.format(args.model_folder, args.exp_name, epoch), np.array([val_losses]).squeeze())
+        np.save('{}/val_seg_iou_{}_epoch_{}.npy'.format(args.model_folder, args.exp_name, epoch), np.array([val_iou]).squeeze())
 
     # Saving plots
     logger.info("saving results to png...")
@@ -130,27 +138,25 @@ def main(args):
     
         
 
-def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
+def train(loader, model, criterion, optimizer, epoch, logger):
     # TODO: training routine
     model.train()
-    epoch_loss = 0
-    running_loss = 0
+    epoch_loss = 0.
+    running_loss = 0.
     count = 0
-    iters = len(loader)
-    for i, data in enumerate(loader):
+    for i, data in enumerate(loader, 0):
         if i ==5:
             break
         images, labels = data[0].cuda(), data[1].cuda()
         optimizer.zero_grad()
         outputs = model(images)
         labels = (labels.squeeze() * 255).long()
-        loss = criterion(outputs, labels)
-        epoch_loss += loss
-        count += labels.size(0)
-        running_loss += loss
+        loss = criterion(outputs, labels).mean()
+        epoch_loss += loss.item()
+        running_loss += loss.item()
+        count += 1
         loss.backward()
         optimizer.step()
-        scheduler.step(epoch + i / iters)
         if (i % 100 == 99):
             logger.info("Epoch %i training iter %i with loss %f" % 
                         (epoch + 1, i + 1, running_loss / 100))
@@ -161,28 +167,30 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
 def validate(loader, model, criterion, logger, epoch=0):
     # TODO: validation routine
     model.eval()
-    val_loss = 0
-    iou = 0
+    val_loss = 0.
+    iou = 0.
     total = 0
     with torch.no_grad():
-        for _, data in enumerate(loader):
+        for _, data in enumerate(loader, 0):
             image, label = data[0].cuda(), data[1].cuda()
+            # print(image.shape)
+            # print(label.shape)
             output = model(image)
             label = label * 255
             label = torch.nn.functional.interpolate(label, (output.shape[2], output.shape[3]))
-            label = label.squeeze(1)
-            loss = criterion(output, label.long())
-            val_loss += loss
-            total += label.size(0)
-            iou += mIoU(output, label)
-    return loss / total, (100 * iou / total)
+            label = label.squeeze(1).long()
+            # print(label.shape)
+            val_loss += criterion(output, label).mean().item()
+            iou += mIoU(output, label).item()
+            total += 1
+    return val_loss / total, (100*iou / total)
     # return mean_val_loss, mean_val_iou
 
 
 def save_model(model, optimizer, args, epoch, val_loss, val_iou, logger, best=False):
     # save model
     add_text_best = 'BEST' if best else ''
-    logger.info('==> Saving '+add_text_best+' ... epoch{} loss{:.03f} miou{:.03f} '.format(epoch, val_loss, val_iou))
+    logger.info('==> Saving '+add_text_best+' ... epoch%i loss%.3f miou%.3f ' % (epoch, val_loss, val_iou))
     state = {
         'opt': args,
         'epoch': epoch,
@@ -192,9 +200,9 @@ def save_model(model, optimizer, args, epoch, val_loss, val_iou, logger, best=Fa
         'miou': val_iou
     }
     if best:
-        torch.save(state, os.path.join(args.model_folder, 'ckpt_best.pth'))
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_miou%.3f_best.pth' % (epoch, val_loss, val_iou)))
     else:
-        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch{}_loss{:.03f}_miou{:.03f}.pth'.format(epoch, val_loss, val_iou)))
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_miou%.3f.pth' % (epoch, val_loss, val_iou)))
 
 if __name__ == '__main__':
     args = parse_arguments()
