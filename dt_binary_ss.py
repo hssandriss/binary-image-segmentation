@@ -109,14 +109,14 @@ def main(args):
         
         if (val_loss < best_val_loss):
             best_val_loss = val_loss
-            save_model(model, optimizer, args.model_folder,epoch, val_loss, val_iou, logger, best=True)
+            save_model(model, optimizer, args.model_folder,epoch, val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
             best_val_miou  = best_val_miou
             logger.info("saving weights...")
-            save_model(model, optimizer, args ,epoch, val_loss, val_iou, logger, best=True)
+            save_model(model, optimizer, args ,epoch, val_loss, val_miou, logger, best=True)
         else:
             logger.info("saving weights...")
-            save_model(model, optimizer, args,epoch, val_loss, val_iou, logger, best=False)
+            save_model(model, optimizer, args,epoch, val_loss, val_miou, logger, best=False)
 
         # Saving csv
         logger.info("saving results to csv...")
