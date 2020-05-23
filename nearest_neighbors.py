@@ -46,21 +46,22 @@ def main(args):
                                              pin_memory=True, drop_last=True, collate_fn=custom_collate)
     # choose/sample which images you want to compute the NNs of.
     # You can try different ones and pick the most interesting ones.
-    query_indices = [2]
-    nns = []
-
+    
+    query_indices = ["1.jpg"]
+    print(data_root)
     for idx, img in enumerate(val_loader.dataset):
-        if idx not in query_indices:
+        if val_loader.dataset.image_files[idx] not in query_indices:
             continue
         print("Computing NNs for sample {}".format(idx))
         closest_idx, closest_dist = find_nn(model, img, val_loader, 5)
         # TODO: retrieve the original NN images, save them and log the results."
-        logger.info("distances to the closest images are %s " % (str(closest_dist.tolist())))
-        logger.info("indices of closest images are %s " % (str(closest_idx.tolist())))
+        logger.info("distances to the closest images are {} ".format(closest_dist.tolist()))
+        logger.info("files of closest images are {} ".format([val_loader.dataset.image_files[idx] for idx in closest_dist.tolist()]))
+        sample_file = val_loader.dataset.image_files[idx]
         for nn_idx in closest_idx.tolist():
-            save_image(val_loader.dataset[nn_idx], "%s/%i/nn_img_%i.jpg" % (args.output_folder, idx, nn_idx) )
-        save_image(img, "%s/%i/sample_img_%i.jpg" % (args.output_folder, idx, idx))
-
+            nn_file = val_loader.dataset.image_files[nn_idx]
+            copyfile("./%s/256/val/%s" % (args.data_root, nn_file), "./%s/%i/%s" % (args.output_folder, nn_file.split(".")[0], nn_file))
+        copyfile("./%s/256/val/%s" % (args.data_root, sample_file), "./%s/%i/%s" % (args.output_folder, sample_file.split(".")[0], sample_file))
 
 def find_nn(model, query_img, loader, k):
     """

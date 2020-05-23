@@ -30,7 +30,6 @@ def parse_arguments():
     parser.add_argument('--exp-suffix', type=str, default="", help="string to identify the experiment")
     args = parser.parse_args()
 
-    hparam_keys = ["lr", "bs", "loss"]
     hparam_keys = ["lr", "bs"]
     args.exp_name = "_".join(["{}{}".format(k, getattr(args, k)) for k in hparam_keys])
 
@@ -103,13 +102,13 @@ def main(args):
         val_losses.append(val_loss)
         val_iou.append(val_miou)
         logger.info("----------------------------------------------------------")
-        logger.info("Epoch %d  train_loss %.3f val_loss: %.3f val_acc: %.3f" %
+        logger.info("Epoch %d  train_loss %.3f val_loss: %.3f val_miou: %.3f" %
                     (epoch, train_loss, val_loss, val_miou))
         logger.info("----------------------------------------------------------")
         
         if (val_loss < best_val_loss):
             best_val_loss = val_loss
-            save_model(model, optimizer, args.model_folder,epoch, val_loss, val_miou, logger, best=True)
+            save_model(model, optimizer, args ,epoch, val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
             best_val_miou  = best_val_miou
             logger.info("saving weights...")
@@ -190,7 +189,7 @@ def validate(loader, model, criterion, logger, epoch=0):
 def save_model(model, optimizer, args, epoch, val_loss, val_iou, logger, best=False):
     # save model
     add_text_best = 'BEST' if best else ''
-    logger.info('==> Saving '+add_text_best+' ... epoch%i loss%.3f miou%.3f ' % (epoch, val_loss, val_iou))
+    logger.info('==> Saving '+add_text_best+' ... epoch %i loss %.3f miou %.3f ' % (epoch, val_loss, val_iou))
     state = {
         'opt': args,
         'epoch': epoch,

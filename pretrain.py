@@ -143,7 +143,7 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
 # validation function. you can change the method's signature.
 def validate(loader, model, criterion, logger):
     # model.eval()
-    correct = 0
+    correct = 0.
     total = 0
     loss = 0.
     with torch.no_grad():
