@@ -103,9 +103,9 @@ def main(args):
             logger.info("Last model is not better but just saved!")
             save_model(model, optimizer, args ,epoch, val_loss, val_acc, logger, best=False)
         logger.info("saving results to csv...")
-        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze(), delimiter=';')
-        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze(), delimiter=';')
-        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_acc]).squeeze(), delimiter=';')
+        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([train_losses]), delimiter=';')
+        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_losses]), delimiter=';')
+        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_acc]), delimiter=';')
 
     # Saving plots
     logger.info("saving results to png...")
@@ -128,8 +128,6 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
     count = 0
     iters = len(loader)
     for i, data in enumerate(loader, 0):
-        if i == 5:
-            break
         img, label = data
         img, label = img.cuda(), label.cuda()
         output = model(img)
@@ -143,7 +141,6 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
         scheduler.step(epoch + i / iters)
         if (i % 100 == 99):
             logger.info("Epoch %i training iter %i with loss %.5f" % (epoch, i + 1, running_loss / 100))
-            # print("training %i - loss %.5f" % ( i+1, running_loss / 1000))
             running_loss = 0.
     return epoch_loss / count
 
@@ -159,18 +156,16 @@ def validate(loader, model, criterion, logger):
             images, labels = data
             images, labels = images.cuda(), labels.cuda()
             outputs = model(images)
-            # _, predicted = torch.max(outputs.data, 1)
             loss += criterion(outputs, labels).mean().item()
             total += 1
             correct += accuracy(outputs, labels)[0].item()
-            # correct += (predicted == labels).sum().item()
     return loss / total, (correct / total)
 
 
 def save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=False):
     # save model
     add_text_best = 'BEST' if best else ''
-    logger.info('==> Saving '+add_text_best+' ... epoch: %i loss: %.3f acc: %.3f' % (epoch, val_loss, val_iou))
+    logger.info('==> Saving '+add_text_best+' ... epoch: %i loss: %.3f acc: %.3f' % (epoch, val_loss, val_acc))
     state = {
         'opt': args,
         'epoch': epoch,
@@ -180,9 +175,9 @@ def save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=Fa
         'acc': val_acc
     }
     if best:
-        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f_best.pth' % (epoch, val_loss, val_iou)))
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f_best.pth' % (epoch, val_loss, val_acc)))
     else:
-        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f.pth' % (epoch, val_loss, val_iou)))
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f.pth' % (epoch, val_loss, val_acc)))
 
 if __name__ == '__main__':
     args = parse_arguments()
