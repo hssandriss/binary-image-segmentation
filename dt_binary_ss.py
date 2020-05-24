@@ -119,9 +119,9 @@ def main(args):
 
         # Saving csv
         logger.info("saving results to csv...")
-        np.save('{}/train_seg_loss_{}_epoch_{}.npy'.format(args.model_folder, args.exp_name, epoch), np.array([train_losses]).squeeze())
-        np.save('{}/val_seg_loss_{}_epoch_{}.npy'.format(args.model_folder, args.exp_name, epoch), np.array([val_losses]).squeeze())
-        np.save('{}/val_seg_iou_{}_epoch_{}.npy'.format(args.model_folder, args.exp_name, epoch), np.array([val_iou]).squeeze())
+        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze(), delimiter=';')
+        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze(), delimiter=';')
+        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_iou]).squeeze(), delimiter=';')
 
     # Saving plots
     logger.info("saving results to png...")

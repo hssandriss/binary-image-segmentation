@@ -57,7 +57,7 @@ def main(args):
     train_transform, val_transform = get_transforms_pretraining(args)
     train_data = DataReaderPlainImg(os.path.join(data_root, str(args.size), "train"), transform=train_transform)
     val_data = DataReaderPlainImg(os.path.join(data_root, str(args.size), "val"), transform=val_transform)
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.bs, shuffle=False, num_workers=2,
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.bs, shuffle=True, num_workers=2,
                                                pin_memory=True, drop_last=True, collate_fn=custom_collate)
     val_loader = torch.utils.data.DataLoader(val_data, batch_size=1, shuffle=False, num_workers=2,
                                              pin_memory=True, drop_last=True, collate_fn=custom_collate)
@@ -95,11 +95,10 @@ def main(args):
             logger.info("saving weights...")
             torch.save(model.state_dict(), "{}/task_1_{}_epoch_{}.pth".format(args.model_folder, args.exp_name, epoch))
     
-    # Saving csv
-    logger.info("saving results to csv...")
-    np.save('{}/train_loss{}.npy'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze())
-    np.save('{}/val_loss_{}.npy'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze())
-    np.save('{}/val_acc_{}.npy'.format(args.model_folder, args.exp_name), np.array([val_accs]).squeeze())
+        logger.info("saving results to csv...")
+        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze(), delimiter=';')
+        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze(), delimiter=';')
+        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_acc]).squeeze(), delimiter=';')
 
     # Saving plots
     logger.info("saving results to png...")

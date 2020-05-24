@@ -29,12 +29,22 @@ class AttSegmentator(nn.Module):
 
     def forward(self, x, v_class, out_att=False):
 
-        raise NotImplementedError("TODO: Implement the attention-based segmentation network")
+        # "TODO: Implement the attention-based segmentation network"
         # Write the forward pass of the model.
         # Base the model on the segmentation model and add the attention layer.
         # Be aware of the dimentions.
+        self.low_feat.eval()
+        self.encoder.eval()
+        with torch.no_grad():
+            # This is possible since gradients are not being updated
+            low_level_feat = self.low_feat(x)['layer1']
+            enc_feat = self.encoder(x)['out']
+        # enc_feat
+        x_enc = enc_feat.permute(0, 2, 3, 1).contiguous().view(enc_feat.size(0), -1, enc_feat.size(1))
+        class_vec = self.class_encoder(v_class)
         x_enc, attention = self.attention_enc(x_enc, class_vec)
-
+        x_enc = x_enc.permute(0, 2, 1).contiguous().view(enc_feat.shape)
+        segmentation = self.decoder(x_enc , low_level_feat)
         if out_att:
             return segmentation, attention
         return segmentation
@@ -42,7 +52,7 @@ class AttSegmentator(nn.Module):
 if __name__ == "__main__":
     from torchvision.models.resnet import resnet18
     pretrained_model = resnet18(num_classes=4).cuda()
-    model = AttSegmentator(10, pretrained_model, att_type='dotprod', double_att=True).cuda()
+    model = AttSegmentator(10, pretrained_model, att_type='dotprod').cuda()
     model.eval()
     print(model)
     image = torch.randn(1, 3, 512, 512).cuda()

@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from data.transforms import get_transforms_binary_segmentation
 from models.pretraining_backbone import ResNet18Backbone
 from data.segmentation import DataReaderSingleClassSemanticSegmentationVector, DataReaderSemanticSegmentationVector
-
+import matplotlib.pyplot as plt
 set_random_seed(0)
 global_step = 0
 
@@ -51,7 +51,7 @@ def main(args):
     pretrained_model = ResNet18Backbone(False)
     # TODO: Complete the documentation for AttSegmentator model
     raise NotImplementedError("TODO: Build model AttSegmentator model")
-    model = None
+    model = AttSegmentator(2, pretrained_model.features, att_type='dotprod')
 
     if os.path.isfile(args.pretrained_model_path):
         model = load_from_weights(model, args.pretrained_model_path, logger)
@@ -85,10 +85,10 @@ def main(args):
 
 
     # TODO: loss
-    criterion = None
+    criterion = torch.nn.CrossEntropyLoss()
     # TODO: SGD optimizer (see pretraining)
-    optimizer = None
-    raise NotImplementedError("TODO: loss function and SGD optimizer")
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    # TODO: loss function and SGD optimizer")
 
     expdata = "  \n".join(["{} = {}".format(k, v) for k, v in vars(args).items()])
     logger.info(expdata)
@@ -97,15 +97,53 @@ def main(args):
 
     best_val_loss = np.inf
     best_val_miou = 0.0
+
+    train_losses = []
+    val_losses = []
+    val_iou = []
+
     for epoch in range(100):
         logger.info("Epoch {}".format(epoch))
-        train(train_loader, model, criterion, optimizer, log, logger)
-        val_loss, val_iou = validate(val_loader, model, criterion, log, logger, epoch)
+        train(train_loader, model, criterion, optimizer, logger)
+        val_loss, val_miou = validate(val_loader, model, criterion, logger, epoch)
 
         # TODO save model
-        raise NotImplementedError("TODO: implement the code for saving the model")
+        logger.info("----------------------------------------------------------")
+        logger.info("Epoch %d  train_loss %.3f val_loss: %.3f val_miou: %.3f" %
+                    (epoch, train_loss, val_loss, val_miou))
+        logger.info("----------------------------------------------------------")
+        
+        if (val_loss < best_val_loss):
+            best_val_loss = val_loss
+            save_model(model, optimizer, args ,epoch, val_loss, val_miou, logger, best=True)
+        elif (val_miou > best_val_miou):
+            best_val_miou  = best_val_miou
+            logger.info("saving weights...")
+            save_model(model, optimizer, args ,epoch, val_loss, val_miou, logger, best=True)
+        else:
+            logger.info("saving weights...")
+            save_model(model, optimizer, args,epoch, val_loss, val_miou, logger, best=False)
 
-def train(loader, model, criterion, optimizer, log, logger):
+        # Saving csv
+        logger.info("saving results to csv...")
+        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze(), delimiter=';')
+        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze(), delimiter=';')
+        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_iou]).squeeze(), delimiter=';')
+
+    # Saving plots
+    logger.info("saving results to png...")
+    fig = plt.figure()
+    plt.plot(np.arange(len(train_losses)), np.array([train_losses]).squeeze(), 'r', label="Training loss")
+    plt.plot(np.arange(len(val_losses)), np.array([val_losses]).squeeze(), 'g', label="Validation loss")
+    plt.legend(loc="upper right")
+    plt.xlabel("epoch")
+    plt.xlabel("average loss")
+    plt.ylim(-1, 3)
+    plt.title("Validation and training losses on the attention based segmentation")
+    fig.savefig('{}/task_2_att_seg_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
+    # TODO: implement the code for saving the model"
+
+def train(loader, model, criterion, optimizer, logger):
     logger.info("Training")
     model.train()
 
@@ -145,7 +183,7 @@ def train(loader, model, criterion, optimizer, log, logger):
     time_txt = "batch time: {:.2f} total time: {:.2f}".format(time_meter.mean, time.time()-start_time)
     logger.info(time_txt)
 
-def validate(loader, model, criterion, log, logger, epoch=0):
+def validate(loader, model, criterion, logger, epoch=0):
     logger.info("Validating Epoch {}".format(epoch))
     model.eval()
 
@@ -168,6 +206,26 @@ def validate(loader, model, criterion, log, logger, epoch=0):
     text_print = "Epoch {} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f}".format(epoch, loss_meter.mean, iou_meter.mean, time.time()-start_time)
     logger.info(text_print)
     return loss_meter.mean, iou_meter.mean
+
+
+def save_model(model, optimizer, args, epoch, val_loss, val_iou, logger, best=False):
+    # save model
+    add_text_best = 'BEST' if best else ''
+    logger.info('==> Saving '+add_text_best+' ... epoch %i loss %.3f miou %.3f ' % (epoch, val_loss, val_iou))
+    state = {
+        'opt': args,
+        'epoch': epoch,
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'loss': val_loss,
+        'miou': val_iou
+    }
+    if best:
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_miou%.3f_best.pth' % (epoch, val_loss, val_iou)))
+    else:
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_miou%.3f.pth' % (epoch, val_loss, val_iou)))
+
+
 
 if __name__ == '__main__':
     args = parse_arguments()
