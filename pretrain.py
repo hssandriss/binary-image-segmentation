@@ -74,6 +74,7 @@ def main(args):
     logger.info('val_data {}'.format(val_data.__len__()))
 
     best_val_loss = np.inf
+    best_val_acc = 0.0
     # Train-validate for one epoch. You don't have to run it for 100 epochs, preferably until it starts overfitting.
     train_losses = []
     val_losses = []
@@ -85,16 +86,22 @@ def main(args):
         val_losses.append(val_loss)
         val_accs.append(val_acc)
         logger.info("----------------------------------------------------------")
-        logger.info("Epoch %d  train_loss %.3f val_loss: %.3f val_acc: %.3f" %
+        logger.info("Epoch: %d  train_loss: %.3f val_loss: %.3f val_acc: %.3f" %
                     (epoch, train_loss, val_loss, val_acc))
         logger.info("----------------------------------------------------------")
         # print("Epoch %d  train_loss %.3f val_loss: %.3f val_acc: %.3f \n" % (epoch, train_loss, val_loss, val_acc))
         # save model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            logger.info("saving weights...")
-            torch.save(model.state_dict(), "{}/task_1_{}_epoch_{}.pth".format(args.model_folder, args.exp_name, epoch))
-    
+            logger.info("Model with best validation loss found!")
+            save_model(model, optimizer, args ,epoch, val_loss, val_acc, logger, best=True)  
+        elif val_acc > best_val_acc:
+            best_val_acc = val_acc
+            logger.info("Model with best validation acc found!")
+            save_model(model, optimizer, args ,epoch, val_loss, val_acc, logger, best=True)
+        else:
+            logger.info("Last model is not better but just saved!")
+            save_model(model, optimizer, args ,epoch, val_loss, val_acc, logger, best=False)
         logger.info("saving results to csv...")
         np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([train_losses]).squeeze(), delimiter=';')
         np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_losses]).squeeze(), delimiter=';')
@@ -110,7 +117,7 @@ def main(args):
     plt.xlabel("average loss")
     plt.ylim(-1, 3)
     plt.title("Validation and training losses on the pretraining")
-    fig.savefig('{}/task_1_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
+    fig.savefig('{}/task_1_pretrain_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
 
 
 # train one epoch over the whole training dataset. You can change the method's signature.
@@ -121,6 +128,8 @@ def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
     count = 0
     iters = len(loader)
     for i, data in enumerate(loader, 0):
+        if i == 5:
+            break
         img, label = data
         img, label = img.cuda(), label.cuda()
         output = model(img)
@@ -157,6 +166,23 @@ def validate(loader, model, criterion, logger):
             # correct += (predicted == labels).sum().item()
     return loss / total, (correct / total)
 
+
+def save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=False):
+    # save model
+    add_text_best = 'BEST' if best else ''
+    logger.info('==> Saving '+add_text_best+' ... epoch: %i loss: %.3f acc: %.3f' % (epoch, val_loss, val_iou))
+    state = {
+        'opt': args,
+        'epoch': epoch,
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'loss': val_loss,
+        'acc': val_acc
+    }
+    if best:
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f_best.pth' % (epoch, val_loss, val_iou)))
+    else:
+        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f.pth' % (epoch, val_loss, val_iou)))
 
 if __name__ == '__main__':
     args = parse_arguments()

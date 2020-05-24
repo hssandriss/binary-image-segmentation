@@ -108,13 +108,14 @@ def main(args):
         
         if (val_loss < best_val_loss):
             best_val_loss = val_loss
+            logger.info("Model with best validation loss found!")
             save_model(model, optimizer, args ,epoch, val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
             best_val_miou  = best_val_miou
-            logger.info("saving weights...")
+            logger.info("Model with best validation miou found!")
             save_model(model, optimizer, args ,epoch, val_loss, val_miou, logger, best=True)
         else:
-            logger.info("saving weights...")
+            logger.info("Last model is not better but just saved!")
             save_model(model, optimizer, args,epoch, val_loss, val_miou, logger, best=False)
 
         # Saving csv
@@ -133,7 +134,7 @@ def main(args):
     plt.xlabel("average loss")
     plt.ylim(-1, 3)
     plt.title("Validation and training losses on the binary segmentation")
-    fig.savefig('{}/task_1_seg_{}.png'.format(args.model_folder, args.exp_name), dpi=300)    
+    fig.savefig('{}/task_1_binseg_{}.png'.format(args.model_folder, args.exp_name), dpi=300)    
     
         
 
