@@ -54,7 +54,7 @@ def main(args):
         if val_loader.dataset.image_files[idx] not in query_indices:
             continue
         print("Computing NNs for sample {}".format(idx))
-        closest_idx, closest_dist = find_nn(model, img, val_loader, 5)
+        closest_idx, closest_dist = find_nn(model, img, val_loader, 5, logger)
         # TODO: retrieve the original NN images, save them and log the results."
         sample_imagefile = val_loader.dataset.image_files[idx]
         closest_image_files = [val_loader.dataset.image_files[idx] for idx in closest_idx.tolist()]
@@ -67,7 +67,7 @@ def main(args):
                  (args.output_folder, sample_imagefile.split(".")[0], sample_imagefile))
 
 
-def find_nn(model, query_img, loader, k):
+def find_nn(model, query_img, loader, k, logger):
     """
     Find the k nearest neighbors (NNs) of a query image, in the feature space of the specified mode.
     Args:
@@ -87,6 +87,9 @@ def find_nn(model, query_img, loader, k):
         # dist = torch.norm((f_rep - f_rep_i), 2)
         dist = ((f_rep - f_rep_i) ** 2).sum(-1)
         distances = torch.cat((distances, dist))
+        if i % 100:
+            logger.info("iter {}/{} ".format(i/100, len(loader.dataset)/100))
+
     closest_dist, closest_idx = distances.topk(k)
     return closest_idx, closest_dist
 
