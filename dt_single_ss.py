@@ -9,7 +9,7 @@ from utils.meters import AverageValueMeter
 from utils.weights import load_from_weights
 from utils import check_dir, set_random_seed, accuracy, mIoU, get_logger, save_in_log
 from models.att_segmentation import AttSegmentator
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 from data.transforms import get_transforms_binary_segmentation
 from models.pretraining_backbone import ResNet18Backbone
 from data.segmentation import DataReaderSingleClassSemanticSegmentationVector, DataReaderSemanticSegmentationVector
@@ -21,7 +21,7 @@ global_step = 0
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('data_folder', type=str, help="folder containing the data")
-    parser.add_argument('--pretrained_model_path', type=str, default='')
+    parser.add_argument('--pretrained-model-path', type=str, default='')
     parser.add_argument('--output-root', type=str, default='results')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--bs', type=int, default=32, help='batch_size')
@@ -35,7 +35,7 @@ def parse_arguments():
     hparam_keys = ["lr", "bs", "att"]
     args.exp_name = "_".join(["{}{}".format(k, getattr(args, k)) for k in hparam_keys])
 
-    args.exp_name += "_{}_{}".format(args.exp_suffix)
+    args.exp_name += "_{}".format(args.exp_suffix)
 
     args.output_folder = check_dir(os.path.join(args.output_root, 'dt_attseg', args.exp_name))
     args.model_folder = check_dir(os.path.join(args.output_folder, "models"))
@@ -50,11 +50,10 @@ def main(args):
     img_size = (args.size, args.size)
 
     # model
-    pretrained_model = ResNet18Backbone(False)
+    pretrained_model = ResNet18Backbone(False).cuda()
     # TODO: Complete the documentation for AttSegmentator model
     # TODO: Build model AttSegmentator model
-    model = AttSegmentator(2, pretrained_model.features, att_type='dotprod')
-
+    model = AttSegmentator(5, pretrained_model.features, att_type='dotprod').cuda()
     if os.path.isfile(args.pretrained_model_path):
         model = load_from_weights(model, args.pretrained_model_path, logger)
 
@@ -160,6 +159,9 @@ def train(loader, model, criterion, optimizer, logger):
     start_time = time.time()
     batch_time = time.time()
     for idx, (img, v_class, label) in enumerate(loader):
+        # img, v_class, label = img.cuda(), v_class.cuda(), label.cuda()
+        if idx == 5:
+            break
         img = img.cuda()
         v_class = v_class.float().cuda().squeeze()
         logits, alphas = model(img, v_class, out_att=True)
@@ -176,14 +178,12 @@ def train(loader, model, criterion, optimizer, logger):
         loss_meter.add(loss.item())
         iou_meter.add(iou)
         time_meter.add(time.time()-batch_time)
-
         if idx % 50 == 0 or idx == len(loader)-1:
             text_print = "Epoch {:.4f} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f} (Total:{:.2f}) Progress {}/{}".format(
                 global_step / steps_per_epoch, loss_meter.mean, iou_meter.mean, time_meter.mean, time.time()-start_time, idx, int(steps_per_epoch))
             logger.info(text_print)
             loss_meter.reset()
             iou_meter.reset()
-
         batch_time = time.time()
     time_txt = "batch time: {:.2f} total time: {:.2f}".format(time_meter.mean, time.time()-start_time)
     logger.info(time_txt)
