@@ -30,7 +30,7 @@ def parse_arguments():
     parser.add_argument('--weights-init-encoder', type=str, default="ImageNet")
     parser.add_argument('--weights-init-decoder', type=str, default="")
     parser.add_argument('--output-root', type=str, default='results')
-    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--bs', type=int, default=32, help='batch_size')
     parser.add_argument('--size', type=int, default=256, help='image size')
     parser.add_argument('--snapshot-freq', type=int,
