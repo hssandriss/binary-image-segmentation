@@ -136,7 +136,7 @@ def main(args):
             save_model(model, optimizer, args, epoch,
                        val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
-            best_val_miou = best_val_miou
+            best_val_miou = val_miou
             logger.info("saving weights...")
             save_model(model, optimizer, args, epoch,
                        val_loss, val_miou, logger, best=True)
@@ -177,8 +177,6 @@ def train(loader, model, criterion, optimizer, epoch, logger):
     running_loss = 0.
     count = 0
     for i, data in enumerate(loader, 0):
-        if i == 5:
-            break
         images, labels = data[0].cuda(), data[1].cuda()
         optimizer.zero_grad()
         outputs = model(images)

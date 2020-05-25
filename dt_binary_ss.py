@@ -124,7 +124,7 @@ def main(args):
             save_model(model, optimizer, args, epoch,
                        val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
-            best_val_miou = best_val_miou
+            best_val_miou = val_miou
             logger.info("Model with best validation miou found!")
             save_model(model, optimizer, args, epoch,
                        val_loss, val_miou, logger, best=True)
