@@ -5,6 +5,7 @@
 # Use utils.instance_mIoU to evaluate your model
 
 import matplotlib.pyplot as plt
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from data.segmentation import DataReaderSemanticSegmentation
 from models.pretraining_backbone import ResNet18Backbone
 from data.transforms import get_transforms_binary_segmentation
@@ -30,7 +31,7 @@ def parse_arguments():
     parser.add_argument('--weights-init-encoder', type=str, default="ImageNet")
     parser.add_argument('--weights-init-decoder', type=str, default="")
     parser.add_argument('--output-root', type=str, default='results')
-    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.025, help='learning rate')
     parser.add_argument('--bs', type=int, default=32, help='batch_size')
     parser.add_argument('--size', type=int, default=256, help='image size')
     parser.add_argument('--snapshot-freq', type=int,
@@ -100,6 +101,7 @@ def main(args):
     # TODO: SGD optimizer (see pretraining)
     optimizer = torch.optim.SGD(
         model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
     # TODO: loss function and SGD optimizer"
 
     expdata = "  \n".join(["{} = {}".format(k, v)
@@ -118,7 +120,7 @@ def main(args):
     for epoch in range(50):
         logger.info("Epoch {}".format(epoch))
         train_loss = train(train_loader, model, criterion,
-                           optimizer, epoch, logger)
+                           optimizer, scheduler, epoch, logger)
         train_losses.append(train_loss)
         val_loss, val_miou = validate(
             val_loader, model, criterion, logger, epoch)
@@ -170,11 +172,12 @@ def main(args):
                                                    args.exp_name), dpi=300)
 
 
-def train(loader, model, criterion, optimizer, epoch, logger):
+def train(loader, model, criterion, optimizer, scheduler, epoch, logger):
     # TODO: training routine
     model.train()
     epoch_loss = 0.
     running_loss = 0.
+    iters = len(loader)
     count = 0
     for i, data in enumerate(loader, 0):
         images, labels = data[0].cuda(), data[1].cuda()
@@ -187,6 +190,7 @@ def train(loader, model, criterion, optimizer, epoch, logger):
         count += 1
         loss.backward()
         optimizer.step()
+        scheduler.step(epoch + i / iters)
         if (i % 100 == 99):
             logger.info("Epoch %i training iter %i with loss %f" %
                         (epoch + 1, i + 1, running_loss / 100))
