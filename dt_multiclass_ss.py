@@ -115,7 +115,7 @@ def main(args):
     train_losses = []
     val_losses = []
     val_iou = []
-    for epoch in range(1):
+    for epoch in range(50):
         logger.info("Epoch {}".format(epoch))
         train_loss = train(train_loader, model, criterion,
                            optimizer, epoch, logger)

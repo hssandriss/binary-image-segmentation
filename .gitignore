@@ -1,6 +1,7 @@
 unlabelled_dataset.zip
 unlabelled_dataset/
 segmentation_dataset/
+results/
 *.pyc
 *.log
 .vscode/
