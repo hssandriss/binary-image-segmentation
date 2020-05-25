@@ -67,7 +67,7 @@ def main(args):
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
-    
+
     expdata = "  \n".join(["{} = {}".format(k, v) for k, v in vars(args).items()])
     logger.info(expdata)
     logger.info('train_data {}'.format(train_data.__len__()))
@@ -94,18 +94,21 @@ def main(args):
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             logger.info("Model with best validation loss found!")
-            save_model(model, optimizer, args ,epoch, val_loss, val_acc, logger, best=True)  
+            save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=True)
         elif val_acc > best_val_acc:
             best_val_acc = val_acc
             logger.info("Model with best validation acc found!")
-            save_model(model, optimizer, args ,epoch, val_loss, val_acc, logger, best=True)
+            save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=True)
         else:
             logger.info("Last model is not better but just saved!")
-            save_model(model, optimizer, args ,epoch, val_loss, val_acc, logger, best=False)
+            save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=False)
         logger.info("saving results to csv...")
-        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([train_losses]), delimiter=';')
-        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_losses]), delimiter=';')
-        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name), np.array([val_acc]), delimiter=';')
+        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name),
+                   np.array([train_losses]), delimiter=';')
+        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name),
+                   np.array([val_losses]), delimiter=';')
+        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name),
+                   np.array([val_acc]), delimiter=';')
 
     # Saving plots
     logger.info("saving results to png...")
@@ -165,7 +168,8 @@ def validate(loader, model, criterion, logger):
 def save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=False):
     # save model
     add_text_best = 'BEST' if best else ''
-    logger.info('==> Saving '+add_text_best+' ... epoch: %i loss: %.3f acc: %.3f' % (epoch, val_loss, val_acc))
+    logger.info('==> Saving ' + add_text_best +
+                ' ... epoch: %i loss: %.3f acc: %.3f' % (epoch, val_loss, val_acc))
     state = {
         'opt': args,
         'epoch': epoch,
@@ -175,9 +179,12 @@ def save_model(model, optimizer, args, epoch, val_loss, val_acc, logger, best=Fa
         'acc': val_acc
     }
     if best:
-        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f_best.pth' % (epoch, val_loss, val_acc)))
+        torch.save(state, os.path.join(args.model_folder,
+                                       'ckpt_epoch%i_loss%.3f_acc%.3f_best.pth' % (epoch, val_loss, val_acc)))
     else:
-        torch.save(state, os.path.join(args.model_folder, 'ckpt_epoch%i_loss%.3f_acc%.3f.pth' % (epoch, val_loss, val_acc)))
+        torch.save(state, os.path.join(args.model_folder,
+                                       'ckpt_epoch%i_loss%.3f_acc%.3f.pth' % (epoch, val_loss, val_acc)))
+
 
 if __name__ == '__main__':
     args = parse_arguments()
