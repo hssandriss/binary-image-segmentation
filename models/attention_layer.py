@@ -2,12 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class Attention(nn.Module):
     def __init__(self, encoder_dim, att_type):
         super(Attention, self).__init__()
-        if att_type=='additive':
+        if att_type == 'additive':
             self.attention_layer = AdditiveAttention(encoder_dim)
-        elif att_type=='dotprod':
+        elif att_type == 'dotprod':
             self.attention_layer = DotProdAttention(encoder_dim)
         else:
             raise ValueError('Attention mechanism not defined: '+str(att_type))
@@ -19,6 +20,8 @@ class Attention(nn.Module):
         return context, alpha
 
 # Additive Attention
+
+
 class AdditiveAttention(nn.Module):
     def __init__(self, encoder_dim):
         super(AdditiveAttention, self).__init__()
@@ -46,10 +49,13 @@ class AdditiveAttention(nn.Module):
         return context, alpha
 
 # Dot-Product Based or General Multiplicative Attention
+
+
 class DotProdAttention(nn.Module):
     def __init__(self, encoder_dim):
         super(DotProdAttention, self).__init__()
         self.softmax = nn.Softmax(1)
+
     def forward(self, encoder_output, hidden_state):
         # Verify sizes
         hidden_state = hidden_state.unsqueeze(1).permute(0, 2, 1)
@@ -57,6 +63,7 @@ class DotProdAttention(nn.Module):
         alpha = self.softmax(e)
         context = (encoder_output * alpha)
         return context, alpha
+
 
 if __name__ == "__main__":
     model = Attention(512, 'dotprod').cuda()
