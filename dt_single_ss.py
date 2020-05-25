@@ -160,8 +160,6 @@ def train(loader, model, criterion, optimizer, logger):
     batch_time = time.time()
     for idx, (img, v_class, label) in enumerate(loader):
         # img, v_class, label = img.cuda(), v_class.cuda(), label.cuda()
-        if idx == 5:
-            break
         img = img.cuda()
         v_class = v_class.float().cuda().squeeze()
         logits, alphas = model(img, v_class, out_att=True)
