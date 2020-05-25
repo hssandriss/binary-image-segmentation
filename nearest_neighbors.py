@@ -10,6 +10,8 @@ from utils import check_dir, get_logger
 from models.pretraining_backbone import ResNet18Backbone
 from data.pretraining import DataReaderPlainImg, custom_collate
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -32,7 +34,6 @@ def main(args):
     logger = get_logger(args.output_folder, "KNN")
     data_root = args.data_folder
     # model
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('this is my device: ', device)
     # build model and load weights
     model = ResNet18Backbone(pretrained=False).to(device)
@@ -46,8 +47,8 @@ def main(args):
                                              pin_memory=True, drop_last=True, collate_fn=custom_collate)
     # choose/sample which images you want to compute the NNs of.
     # You can try different ones and pick the most interesting ones.
-    
-    query_indices = ["1.jpg"]
+
+    query_indices = ["41.jpg", "53.jpg", "55.jpg", "80.jpg"]
     print(data_root)
     for idx, img in enumerate(val_loader.dataset):
         if val_loader.dataset.image_files[idx] not in query_indices:
@@ -55,13 +56,16 @@ def main(args):
         print("Computing NNs for sample {}".format(idx))
         closest_idx, closest_dist = find_nn(model, img, val_loader, 5)
         # TODO: retrieve the original NN images, save them and log the results."
+        sample_imagefile = val_loader.dataset.image_files[idx]
+        closest_image_files = [val_loader.dataset.image_files[idx] for idx in closest_idx.tolist()]
         logger.info("distances to the closest images are {} ".format(closest_dist.tolist()))
-        logger.info("files of closest images are {} ".format([val_loader.dataset.image_files[idx] for idx in closest_dist.tolist()]))
-        sample_file = val_loader.dataset.image_files[idx]
-        for nn_idx in closest_idx.tolist():
-            nn_file = val_loader.dataset.image_files[nn_idx]
-            copyfile("./%s/256/val/%s" % (args.data_root, nn_file), "./%s/%i/%s" % (args.output_folder, nn_file.split(".")[0], nn_file))
-        copyfile("./%s/256/val/%s" % (args.data_root, sample_file), "./%s/%i/%s" % (args.output_folder, sample_file.split(".")[0], sample_file))
+        logger.info("files of closest images are {} ".format(closest_image_files))
+        for nn_file in closest_image_files:
+            copyfile("./%s/256/val/%s" % (args.data_root, nn_file), "./%s/%i/%s" %
+                     (args.output_folder, sample_imagefile.split(".")[0], nn_file))
+        copyfile("./%s/256/val/%s" % (args.data_root, sample_imagefile), "./%s/%i/%s" %
+                 (args.output_folder, sample_imagefile.split(".")[0], sample_imagefile))
+
 
 def find_nn(model, query_img, loader, k):
     """
@@ -76,10 +80,10 @@ def find_nn(model, query_img, loader, k):
         closest_dist: the L2 distance of each NN to the features of the query image
     """
     # TODO: nearest neighbors retrieval
-    distances = torch.FloatTensor().cuda()
-    f_rep = model(query_img.unsqueeze(0).cuda())
+    distances = torch.FloatTensor().to(device)
+    f_rep = model(query_img.unsqueeze(0).to(device))
     for i, image in enumerate(loader.dataset):
-        f_rep_i = model(image.unsqueeze(0).cuda())
+        f_rep_i = model(image.unsqueeze(0).to(device))
         # dist = torch.norm((f_rep - f_rep_i), 2)
         dist = ((f_rep - f_rep_i) ** 2).sum(-1)
         distances = torch.cat((distances, dist))
