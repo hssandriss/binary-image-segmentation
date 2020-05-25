@@ -23,7 +23,7 @@ def parse_arguments():
     parser.add_argument('data_folder', type=str, help="folder containing the data")
     parser.add_argument('--pretrained-model-path', type=str, default='')
     parser.add_argument('--output-root', type=str, default='results')
-    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--bs', type=int, default=32, help='batch_size')
     parser.add_argument('--att', type=str, default='sdotprod',
                         help='Type of attention. Choose from {additive, cosine, dotprod, sdotprod}')
@@ -102,7 +102,7 @@ def main(args):
     val_losses = []
     val_iou = []
 
-    for epoch in range(100):
+    for epoch in range(60):
         logger.info("Epoch {}".format(epoch))
         train_loss = train(train_loader, model, criterion, optimizer, logger)
         val_loss, val_miou = validate(val_loader, model, criterion, logger, epoch)
