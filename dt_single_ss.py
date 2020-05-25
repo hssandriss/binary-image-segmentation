@@ -117,7 +117,7 @@ def main(args):
             best_val_loss = val_loss
             save_model(model, optimizer, args, epoch, val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
-            best_val_miou = best_val_miou
+            best_val_miou = val_miou
             logger.info("saving weights...")
             save_model(model, optimizer, args, epoch, val_loss, val_miou, logger, best=True)
         else:
@@ -178,7 +178,7 @@ def train(loader, model, criterion, optimizer, logger):
         time_meter.add(time.time()-batch_time)
         if idx % 50 == 0 or idx == len(loader)-1:
             text_print = "Epoch {:.4f} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f} (Total:{:.2f}) Progress {}/{}".format(
-                global_step / steps_per_epoch, loss_meter.mean, iou_meter.mean, time_meter.mean, time.time()-start_time, idx, int(steps_per_epoch))
+                global_step / steps_per_epoch, loss_meter.mean, iou_meter.mean * 100, time_meter.mean, time.time()-start_time, idx, int(steps_per_epoch))
             logger.info(text_print)
             loss_meter.reset()
             iou_meter.reset()
@@ -211,7 +211,7 @@ def validate(loader, model, criterion, logger, epoch=0):
     text_print = "Epoch {} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f}".format(
         epoch, loss_meter.mean, iou_meter.mean, time.time()-start_time)
     logger.info(text_print)
-    return loss_meter.mean, iou_meter.mean
+    return loss_meter.mean, 100 * iou_meter.mean
 
 
 def save_model(model, optimizer, args, epoch, val_loss, val_iou, logger, best=False):
