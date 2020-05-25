@@ -53,7 +53,7 @@ def main(args):
     pretrained_model = ResNet18Backbone(False).cuda()
     # TODO: Complete the documentation for AttSegmentator model
     # TODO: Build model AttSegmentator model
-    model = AttSegmentator(5, pretrained_model.features, att_type='dotprod').cuda()
+    model = AttSegmentator(5, pretrained_model.features, att_type='additive').cuda()
     if os.path.isfile(args.pretrained_model_path):
         model = load_from_weights(model, args.pretrained_model_path, logger)
 
