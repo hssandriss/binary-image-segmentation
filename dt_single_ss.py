@@ -46,15 +46,21 @@ def parse_arguments():
 
 
 def main(args):
-    # Logging to the file and stdout
+    # Logging to the file and stdout0.1, affine=True, track_running_stats=True)
+      (5): ReLU()
+      (6): Conv2d(256, 2, kernel_size=(1, 1), stride=(1, 1))
+    )
+  )
+)
+torch.Size([2, 2, 512, 512])
     logger = get_logger(args.output_folder, args.exp_name)
     img_size = (args.size, args.size)
 
     # model
-    pretrained_model = ResNet18Backbone(False).cuda()
+    pretrained_model = ResNet18Backbone(False)
     # TODO: Complete the documentation for AttSegmentator model
     # TODO: Build model AttSegmentator model
-    model = AttSegmentator(5, pretrained_model.features, att_type='dotprod').cuda()
+    model = AttSegmentator(5, pretrained_model.features, att_type='dotprod',double_att=True).cuda()
     if os.path.isfile(args.pretrained_model_path):
         model = load_from_weights(model, args.pretrained_model_path, logger)
 
