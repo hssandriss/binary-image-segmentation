@@ -58,7 +58,8 @@ class DotProdAttention(nn.Module):
 
     def forward(self, encoder_output, hidden_state):
         # Verify sizes
-        hidden_state = hidden_state.unsqueeze(1).permute(0, 2, 1)
+        hidden_state = hidden_state.unsqueeze(1)
+        hidden_state = hidden_state.permute(0, 2, 1)
         e = torch.matmul(encoder_output, hidden_state)
         alpha = self.softmax(e)
         context = (encoder_output * alpha)
