@@ -1,3 +1,4 @@
+# import pdb
 import os
 import random
 import numpy as np
@@ -53,7 +54,7 @@ def main(args):
     pretrained_model = ResNet18Backbone(False).cuda()
     # TODO: Complete the documentation for AttSegmentator model
     # TODO: Build model AttSegmentator model
-    model = AttSegmentator(6, pretrained_model.features, att_type='dotprod').cuda()
+    model = AttSegmentator(5, pretrained_model.features, att_type='dotprod').cuda()
     if os.path.isfile(args.pretrained_model_path):
         model = load_from_weights(model, args.pretrained_model_path, logger)
 
@@ -100,59 +101,67 @@ def main(args):
 
     train_losses = []
     val_losses = []
+    train_iou = []
     val_iou = []
 
     for epoch in range(60):
         logger.info("Epoch {}".format(epoch))
-        train_loss = train(train_loader, model, criterion, optimizer, logger)
+
+        train_loss, train_miou = train(train_loader, model, criterion, optimizer, logger)
+        train_losses.append(train_loss)
+        train_iou.append(train_iou)
+
         val_loss, val_miou = validate(val_loader, model, criterion, logger, epoch)
+        val_losses.append(val_loss)
+        val_iou.append(val_miou)
 
         # TODO save model
         logger.info("----------------------------------------------------------")
-        logger.info("Epoch %d  train_loss %.3f val_loss: %.3f val_miou: %.3f" %
-                    (epoch, train_loss, val_loss, val_miou))
+        logger.info("Epoch %d  train_loss %.3f train_miou: %.3f val_loss: %.3f val_miou: %.3f" %
+                    (epoch, train_loss, train_miou, val_loss, val_miou))
         logger.info("----------------------------------------------------------")
 
         if (val_loss < best_val_loss):
             best_val_loss = val_loss
+            logger.info("saving weights...better loss")
             save_model(model, optimizer, args, epoch, val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
             best_val_miou = val_miou
-            logger.info("saving weights...")
+            logger.info("saving weights...better miou")
             save_model(model, optimizer, args, epoch, val_loss, val_miou, logger, best=True)
-        else:
-            logger.info("saving weights...")
-            save_model(model, optimizer, args, epoch, val_loss, val_miou, logger, best=False)
 
         # Saving csv
         logger.info("saving results to csv...")
-        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name),
+        np.savetxt('{}/train_att_loss_{}.csv'.format(args.model_folder, args.exp_name),
                    np.array([train_losses]), delimiter=';')
-        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name),
+        np.savetxt('{}/train_att_iou_{}.csv'.format(args.model_folder, args.exp_name),
+                   np.array([train_iou]), delimiter=';')
+        np.savetxt('{}/val_att_loss_{}.csv'.format(args.model_folder, args.exp_name),
                    np.array([val_losses]), delimiter=';')
-        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name),
+        np.savetxt('{}/val_att_iou_{}.csv'.format(args.model_folder, args.exp_name),
                    np.array([val_iou]), delimiter=';')
 
-    # Saving plots
-    logger.info("saving results to png...")
-    fig = plt.figure()
-    plt.plot(np.arange(len(train_losses)), np.array([train_losses]), 'r', label="Training loss")
-    plt.plot(np.arange(len(val_losses)), np.array([val_losses]), 'g', label="Validation loss")
-    plt.legend(loc="upper right")
-    plt.xlabel("epoch")
-    plt.xlabel("average loss")
-    plt.ylim(-1, 3)
-    plt.title("Validation and training losses on the attention based segmentation")
-    fig.savefig('{}/task_2_att_seg_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
-    # TODO: implement the code for saving the model"
+    # # Saving plots
+    # logger.info("saving results to png...")
+    # fig = plt.figure()
+    # plt.plot(np.arange(len(train_losses)), np.array([train_losses]), 'r', label="Training loss")
+    # plt.plot(np.arange(len(val_losses)), np.array([val_losses]), 'g', label="Validation loss")
+    # plt.legend(loc="upper right")
+    # plt.xlabel("epoch")
+    # plt.xlabel("average loss")
+    # plt.ylim(-1, 3)
+    # plt.title("Validation and training losses on the attention based segmentation")
+    # fig.savefig('{}/task_2_att_seg_{}.png'.format(args.model_folder, args.exp_name), dpi=300)
+    # # TODO: implement the code for saving the model"
 
 
-def train(loader, model, criterion, optimizer, logger):
+def train(loader, model, criterion, optimizer, logger, epoch):
     logger.info("Training")
     model.train()
     batch_loss_meter = AverageValueMeter()
     loss_meter = AverageValueMeter()
     iou_meter = AverageValueMeter()
+    batch_iou_meter = AverageValueMeter()
     time_meter = AverageValueMeter()
     steps_per_epoch = len(loader.dataset) / loader.batch_size
 
@@ -164,6 +173,7 @@ def train(loader, model, criterion, optimizer, logger):
         v_class = v_class.float().cuda().squeeze()
         logits, alphas = model(img, v_class, out_att=True)
         logits = logits.squeeze()
+        # pdb.set_trace()
         labels = (torch.nn.functional.interpolate(label.cuda(), size=logits.shape[-2:]).squeeze(1)*256).long()
         loss = criterion(logits, labels)
         iou = mIoU(logits, labels)
@@ -177,15 +187,15 @@ def train(loader, model, criterion, optimizer, logger):
         iou_meter.add(iou)
         time_meter.add(time.time()-batch_time)
         if idx % 50 == 0 or idx == len(loader)-1:
-            text_print = "Epoch {:.4f} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f} (Total:{:.2f}) Progress {}/{}".format(
-                global_step / steps_per_epoch, loss_meter.mean, iou_meter.mean * 100, time_meter.mean, time.time()-start_time, idx, int(steps_per_epoch))
+            text_print = "Epoch {:i} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f} (Total:{:.2f}) Progress {}/{}".format(
+                epoch, loss_meter.mean, iou_meter.mean * 100, time_meter.mean, time.time()-start_time, idx, int(steps_per_epoch))
             logger.info(text_print)
             loss_meter.reset()
             iou_meter.reset()
         batch_time = time.time()
     time_txt = "batch time: {:.2f} total time: {:.2f}".format(time_meter.mean, time.time()-start_time)
     logger.info(time_txt)
-    return batch_loss_meter.mean
+    return batch_loss_meter.mean, 100 * batch_iou_meter.mean
 
 
 def validate(loader, model, criterion, logger, epoch=0):

@@ -42,7 +42,8 @@ class AttSegmentator(nn.Module):
         # enc_feat
         x_enc = enc_feat.permute(0, 2, 3, 1).contiguous().view(enc_feat.size(0), -1, enc_feat.size(1))
         class_vec = self.class_encoder(v_class)
-        x_enc, attention = self.attention_enc(x_enc, class_vec)
+        context, attention = self.attention_enc(x_enc, class_vec)
+        x_enc = x_enc + context
         x_enc = x_enc.permute(0, 2, 1).contiguous().view(enc_feat.shape)
         segmentation = self.decoder(x_enc, low_level_feat)
         if out_att:

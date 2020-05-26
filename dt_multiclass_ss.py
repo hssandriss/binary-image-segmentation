@@ -124,56 +124,55 @@ def main(args):
                                        optimizer, epoch, logger)
         train_losses.append(train_loss)
         train_iou.append(train_miou)
+
         val_loss, val_miou = validate(
             val_loader, model, criterion, logger, epoch)
         val_losses.append(val_loss)
         val_iou.append(val_miou)
+
         logger.info(
             "----------------------------------------------------------")
-        logger.info("Epoch: %d  train_loss: %.3f val_miou: %.3f val_loss: %.3f val_miou: %.3f" %
+        logger.info("Epoch: %d  train_loss: %.3f train_miou: %.3f val_loss: %.3f val_miou: %.3f" %
                     (epoch, train_loss, train_miou, val_loss, val_miou))
         logger.info(
             "----------------------------------------------------------")
 
         if (val_loss < best_val_loss):
             best_val_loss = val_loss
+            logger.info("saving weights...better loss")
             save_model(model, optimizer, args, epoch,
                        val_loss, val_miou, logger, best=True)
         elif (val_miou > best_val_miou):
             best_val_miou = val_miou
-            logger.info("saving weights...")
+            logger.info("saving weights...better miou")
             save_model(model, optimizer, args, epoch,
                        val_loss, val_miou, logger, best=True)
-        else:
-            logger.info("saving weights...")
-            save_model(model, optimizer, args, epoch,
-                       val_loss, val_miou, logger, best=False)
 
         # Saving csv
         logger.info("saving results to csv...")
-        np.savetxt('{}/train_seg_loss_{}.csv'.format(args.model_folder, args.exp_name),
+        np.savetxt('{}/train_multi_loss_{}.csv'.format(args.model_folder, args.exp_name),
                    np.array([train_losses]), delimiter=';')
-        np.savetxt('{}/val_seg_loss_{}.csv'.format(args.model_folder, args.exp_name),
-                   np.array([val_losses]), delimiter=';')
-        np.savetxt('{}/val_seg_iou_{}.csv'.format(args.model_folder, args.exp_name),
-                   np.array([val_iou]), delimiter=';')
-        np.savetxt('{}/train_seg_iou_{}.csv'.format(args.model_folder, args.exp_name),
+        np.savetxt('{}/train_multi_iou_{}.csv'.format(args.model_folder, args.exp_name),
                    np.array([train_iou]), delimiter=';')
+        np.savetxt('{}/val_multi_loss_{}.csv'.format(args.model_folder, args.exp_name),
+                   np.array([val_losses]), delimiter=';')
+        np.savetxt('{}/val_multi_iou_{}.csv'.format(args.model_folder, args.exp_name),
+                   np.array([val_iou]), delimiter=';')
 
     # Saving plots
-    logger.info("saving results to png...")
-    fig = plt.figure()
-    plt.plot(np.arange(len(train_losses)), np.array(
-        [train_losses]).squeeze(), 'r', label="Training loss")
-    plt.plot(np.arange(len(val_losses)), np.array(
-        [val_losses]).squeeze(), 'g', label="Validation loss")
-    plt.legend(loc="upper right")
-    plt.xlabel("epoch")
-    plt.xlabel("average loss")
-    # plt.ylim(-1, 3)
-    plt.title("Validation and training losses on the multi-class segmentation")
-    fig.savefig('{}/task_2_multiseg_{}.png'.format(args.model_folder,
-                                                   args.exp_name), dpi=300)
+    # logger.info("saving results to png...")
+    # fig = plt.figure()
+    # plt.plot(np.arange(len(train_losses)), np.array(
+    #     [train_losses]).squeeze(), 'r', label="Training loss")
+    # plt.plot(np.arange(len(val_losses)), np.array(
+    #     [val_losses]).squeeze(), 'g', label="Validation loss")
+    # plt.legend(loc="upper right")
+    # plt.xlabel("epoch")
+    # plt.xlabel("average loss")
+    # # plt.ylim(-1, 3)
+    # plt.title("Validation and training losses on the multi-class segmentation")
+    # fig.savefig('{}/task_2_multiseg_{}.png'.format(args.model_folder,
+    #                                                args.exp_name), dpi=300)
 
 
 def train(loader, model, criterion, optimizer, epoch, logger):
