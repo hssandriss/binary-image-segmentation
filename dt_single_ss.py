@@ -104,12 +104,12 @@ def main(args):
     train_iou = []
     val_iou = []
 
-    for epoch in range(60):
+    for epoch in range(1):
         logger.info("Epoch {}".format(epoch))
 
         train_loss, train_miou = train(train_loader, model, criterion, optimizer, logger, epoch)
         train_losses.append(train_loss)
-        train_iou.append(train_iou)
+        train_iou.append(train_miou)
 
         val_loss, val_miou = validate(val_loader, model, criterion, logger, epoch)
         val_losses.append(val_loss)
@@ -158,10 +158,10 @@ def main(args):
 def train(loader, model, criterion, optimizer, logger, epoch):
     logger.info("Training")
     model.train()
-    batch_loss_meter = AverageValueMeter()
+    train_loss_meter = AverageValueMeter()
     loss_meter = AverageValueMeter()
     iou_meter = AverageValueMeter()
-    batch_iou_meter = AverageValueMeter()
+    train_iou_meter = AverageValueMeter()
     time_meter = AverageValueMeter()
     steps_per_epoch = len(loader.dataset) / loader.batch_size
 
@@ -182,9 +182,10 @@ def train(loader, model, criterion, optimizer, logger, epoch):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        batch_loss_meter.add(loss.item())
         loss_meter.add(loss.item())
-        iou_meter.add(iou)
+        train_loss_meter.add(loss.item())
+        iou_meter.add(iou.item())
+        train_iou_meter.add(iou.item())
         time_meter.add(time.time()-batch_time)
         if idx % 50 == 0 or idx == len(loader)-1:
             text_print = "Epoch {} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f} (Total:{:.2f}) Progress {}/{}".format(
@@ -195,7 +196,7 @@ def train(loader, model, criterion, optimizer, logger, epoch):
         batch_time = time.time()
     time_txt = "batch time: {:.2f} total time: {:.2f}".format(time_meter.mean, time.time()-start_time)
     logger.info(time_txt)
-    return batch_loss_meter.mean, 100 * batch_iou_meter.mean
+    return train_loss_meter.mean, 100 * train_iou_meter.mean
 
 
 def validate(loader, model, criterion, logger, epoch=0):
@@ -216,7 +217,7 @@ def validate(loader, model, criterion, logger, epoch=0):
         iou = mIoU(logits, labels)
 
         loss_meter.add(loss.item())
-        iou_meter.add(iou)
+        iou_meter.add(iou.item())
 
     text_print = "Epoch {} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f}".format(
         epoch, loss_meter.mean, iou_meter.mean, time.time()-start_time)
