@@ -28,7 +28,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('data_folder', type=str,
                         help="folder containing the data")
-    parser.add_argument('--weights-init-encoder', type=str, default="ImageNet")
+    parser.add_argument('--weights-init-encoder', type=str, default="")
     parser.add_argument('--weights-init-decoder', type=str, default="")
     parser.add_argument('--output-root', type=str, default='results')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
@@ -61,9 +61,11 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('this is my device: ', device)
     # model
+
     pretrained_encoder = ResNet18Backbone(pretrained=False).to(device)
-    pretrained_encoder.load_state_dict(torch.load(
-        args.weights_init_encoder, map_location=device)['model'], strict=False)
+    if args.args.weights_init_encoder != "":
+        pretrained_encoder.load_state_dict(torch.load(
+            args.weights_init_encoder, map_location=device)['model'], strict=False)
 
     model = Segmentator(6, pretrained_encoder.features, img_size).cuda()
     decoder_chkpt = model.state_dict()
