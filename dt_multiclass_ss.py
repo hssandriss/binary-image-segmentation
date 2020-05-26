@@ -212,7 +212,9 @@ def validate(loader, model, criterion, logger, epoch=0):
     iou = 0.
     total = 0
     with torch.no_grad():
-        for _, data in enumerate(loader, 0):
+        for iter, data in enumerate(loader, 0):
+            if not iter % 100:
+                print("Validating {}/{}".format(iter//100, len(loader)))
             image, label = data[0].cuda(), data[1].cuda()
             output = model(image)
             # print(torch.unique(label))
@@ -223,6 +225,7 @@ def validate(loader, model, criterion, logger, epoch=0):
             val_loss += criterion(output, label).mean().item()
             iou += instance_mIoU(output, label).item()
             total += 1
+
     return val_loss / total, (100*iou / total)
 
 
