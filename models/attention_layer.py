@@ -55,10 +55,11 @@ class DotProdAttention(nn.Module):
     def __init__(self, encoder_dim):
         super(DotProdAttention, self).__init__()
         self.softmax = nn.Softmax(1)
+        self.U = nn.Linear(512, 512)
 
     def forward(self, encoder_output, hidden_state):
         # Verify sizes
-        hidden_state = hidden_state.unsqueeze(1)
+        hidden_state = self.U(hidden_state).unsqueeze(1)
         hidden_state = hidden_state.permute(0, 2, 1)
         e = torch.matmul(encoder_output, hidden_state)
         alpha = self.softmax(e)
