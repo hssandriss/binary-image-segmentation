@@ -41,7 +41,7 @@ class AttSegmentator(nn.Module):
             low_level_feat = self.low_feat(x)['layer1']
         # enc_feat
         x_enc = enc_feat.permute(0, 2, 3, 1).contiguous()
-        x_enc = x_enc.view(enc_feat.size(0), -1, enc_feat.size(-1))
+        x_enc = x_enc.view(enc_feat.size(0), -1, enc_feat.size(1))
         class_vec = self.class_encoder(v_class)
         x_enc, attention = self.attention_enc(x_enc, class_vec)
         x_enc = x_enc.permute(0, 2, 1).contiguous()
@@ -55,10 +55,10 @@ class AttSegmentator(nn.Module):
 if __name__ == "__main__":
     from torchvision.models.resnet import resnet18
     pretrained_model = resnet18(num_classes=4).cuda()
-    model = AttSegmentator(10, pretrained_model, att_type='additive').cuda()
+    model = AttSegmentator(10, pretrained_model, att_type='dotprod').cuda()
     model.eval()
     print(model)
-    image = torch.randn(4, 3, 512, 512).cuda()
+    image = torch.randn(2, 3, 512, 512).cuda()
     v_class = torch.randn(1, 10).cuda()
     with torch.no_grad():
         output = model.forward(image, v_class)
