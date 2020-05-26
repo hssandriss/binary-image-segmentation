@@ -12,7 +12,7 @@ except ModuleNotFoundError:
 
 class AttSegmentator(nn.Module):
 
-    def __init__(self, num_classes, encoder, att_type='additive', img_size=(512, 512)):
+    def __init__(self, num_classes, encoder, att_type='additive', img_size=(512, 512), double_att=True):
         super().__init__()
         self.low_feat = IntermediateLayerGetter(encoder, {"layer1": "layer1"}).cuda()
         self.encoder = IntermediateLayerGetter(encoder, {"layer4": "out"}).cuda()
@@ -40,12 +40,12 @@ class AttSegmentator(nn.Module):
             enc_feat = self.encoder(x)['out']
             low_level_feat = self.low_feat(x)['layer1']
         # enc_feat
-        x_enc = enc_feat.permute(0, 2, 3, 1).contiguous()
-        x_enc = x_enc.view(enc_feat.size(0), -1, enc_feat.size(1))
+        enc_feat_shape = enc_feat.shape
+        enc_feat = enc_feat.permute(0, 2, 3, 1).contiguous()
+        enc_feat = enc_feat.view(enc_feat.shape[0], -1, enc_feat.shape[-1])
         class_vec = self.class_encoder(v_class)
-        x_enc, attention = self.attention_enc(x_enc, class_vec)
-        x_enc = x_enc.permute(0, 2, 1).contiguous()
-        x_enc = x_enc.view(enc_feat.shape)
+        x_enc, attention = self.attention_enc(enc_feat, class_vec)
+        x_enc = x_enc.permute(0, 2, 1).contiguous().view(enc_feat_shape)
         segmentation = self.decoder(x_enc, low_level_feat)
         if out_att:
             return segmentation, attention
@@ -55,11 +55,11 @@ class AttSegmentator(nn.Module):
 if __name__ == "__main__":
     from torchvision.models.resnet import resnet18
     pretrained_model = resnet18(num_classes=4).cuda()
-    model = AttSegmentator(10, pretrained_model, att_type='dotprod').cuda()
+    model = AttSegmentator(10, pretrained_model, att_type='dotprod', double_att=True).cuda()
     model.eval()
     print(model)
     image = torch.randn(2, 3, 512, 512).cuda()
-    v_class = torch.randn(1, 10).cuda()
+    v_class = torch.randn(2, 10).cuda()
     with torch.no_grad():
         output = model.forward(image, v_class)
     print(output.size())

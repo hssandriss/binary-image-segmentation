@@ -46,13 +46,7 @@ def parse_arguments():
 
 
 def main(args):
-    # Logging to the file and stdout0.1, affine=True, track_running_stats=True)
-      (5): ReLU()
-      (6): Conv2d(256, 2, kernel_size=(1, 1), stride=(1, 1))
-    )
-  )
-)
-torch.Size([2, 2, 512, 512])
+    # Logging to the file and stdout
     logger = get_logger(args.output_folder, args.exp_name)
     img_size = (args.size, args.size)
 
@@ -60,7 +54,7 @@ torch.Size([2, 2, 512, 512])
     pretrained_model = ResNet18Backbone(False)
     # TODO: Complete the documentation for AttSegmentator model
     # TODO: Build model AttSegmentator model
-    model = AttSegmentator(5, pretrained_model.features, att_type='dotprod',double_att=True).cuda()
+    model = AttSegmentator(5, pretrained_model.features, att_type='dotprod', double_att=True).cuda()
     if os.path.isfile(args.pretrained_model_path):
         model = load_from_weights(model, args.pretrained_model_path, logger)
 
@@ -113,7 +107,7 @@ torch.Size([2, 2, 512, 512])
     for epoch in range(1):
         logger.info("Epoch {}".format(epoch))
 
-        train_loss, train_miou = train(train_loader, model, criterion, optimizer, logger, epoch)
+        train_loss, train_miou = train(train_loader, model, criterion, optimizer, logger)
         train_losses.append(train_loss)
         train_iou.append(train_miou)
 
@@ -148,10 +142,9 @@ torch.Size([2, 2, 512, 512])
                    np.array([val_iou]), delimiter=';')
 
 
-def train(loader, model, criterion, optimizer, log, logger):
+def train(loader, model, criterion, optimizer, logger):
     logger.info("Training")
     model.train()
-
     loss_meter = AverageValueMeter()
     iou_meter = AverageValueMeter()
     time_meter = AverageValueMeter()
@@ -190,7 +183,7 @@ def train(loader, model, criterion, optimizer, log, logger):
     return loss_meter.mean, iou_meter.mean
 
 
-def validate(loader, model, criterion, log, logger, epoch=0):
+def validate(loader, model, criterion, logger, epoch=0):
     logger.info("Validating Epoch {}".format(epoch))
     model.eval()
 
