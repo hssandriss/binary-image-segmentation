@@ -182,7 +182,7 @@ def train(loader, model, criterion, optimizer, epoch, logger):
     epoch_loss = 0.
     running_loss = 0.
     train_miou = 0
-    iters = len(loader)
+    # iters = len(loader)
     count = 0
     for i, data in enumerate(loader, 0):
         images, labels = data[0].cuda(), data[1].cuda()
