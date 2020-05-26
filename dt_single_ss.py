@@ -187,7 +187,7 @@ def train(loader, model, criterion, optimizer, logger, epoch):
         iou_meter.add(iou)
         time_meter.add(time.time()-batch_time)
         if idx % 50 == 0 or idx == len(loader)-1:
-            text_print = "Epoch {:i} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f} (Total:{:.2f}) Progress {}/{}".format(
+            text_print = "Epoch {} Avg loss = {:.4f} mIoU = {:.4f} Time {:.2f} (Total:{:.2f}) Progress {}/{}".format(
                 epoch, loss_meter.mean, iou_meter.mean * 100, time_meter.mean, time.time()-start_time, idx, int(steps_per_epoch))
             logger.info(text_print)
             loss_meter.reset()

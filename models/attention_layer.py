@@ -61,9 +61,9 @@ class DotProdAttention(nn.Module):
     def forward(self, encoder_output, hidden_state):
         # Verify sizes
         # hidden_state ------ torch.Size([24, 512])
-        hidden_state = self.U(hidden_state).unsqueeze(1)
+        # hidden_state = self.U(hidden_state).unsqueeze(1)
         # Uh ------ torch.Size([24, 1, 512])
-        encoder_output = self.W(encoder_output)
+        # encoder_output = self.W(encoder_output)
         hidden_state = hidden_state.unsqueeze(1).permute(0, 2, 1)
         e = torch.matmul(encoder_output, hidden_state)
         alpha = self.softmax(e.squeeze(2))

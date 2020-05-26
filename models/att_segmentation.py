@@ -54,7 +54,7 @@ class AttSegmentator(nn.Module):
 if __name__ == "__main__":
     from torchvision.models.resnet import resnet18
     pretrained_model = resnet18(num_classes=4).cuda()
-    model = AttSegmentator(10, pretrained_model, att_type='additive').cuda()
+    model = AttSegmentator(10, pretrained_model, att_type='dotprod').cuda()
     model.eval()
     print(model)
     image = torch.randn(1, 3, 512, 512).cuda()
