@@ -42,8 +42,8 @@ class AttSegmentator(nn.Module):
         # enc_feat
         x_enc = enc_feat.permute(0, 2, 3, 1).contiguous().view(enc_feat.size(0), -1, enc_feat.size(1))
         class_vec = self.class_encoder(v_class)
-        context, attention = self.attention_enc(x_enc, class_vec)
-        x_enc = x_enc + context
+        x_enc, attention = self.attention_enc(x_enc, class_vec)
+        # x_enc = x_enc + context
         x_enc = x_enc.permute(0, 2, 1).contiguous().view(enc_feat.shape)
         segmentation = self.decoder(x_enc, low_level_feat)
         if out_att:
@@ -54,7 +54,7 @@ class AttSegmentator(nn.Module):
 if __name__ == "__main__":
     from torchvision.models.resnet import resnet18
     pretrained_model = resnet18(num_classes=4).cuda()
-    model = AttSegmentator(10, pretrained_model, att_type='dotprod').cuda()
+    model = AttSegmentator(10, pretrained_model, att_type='additive').cuda()
     model.eval()
     print(model)
     image = torch.randn(1, 3, 512, 512).cuda()
