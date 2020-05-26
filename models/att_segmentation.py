@@ -57,7 +57,7 @@ if __name__ == "__main__":
     model = AttSegmentator(10, pretrained_model, att_type='additive').cuda()
     model.eval()
     print(model)
-    image = torch.randn(1, 3, 512, 512).cuda()
+    image = torch.randn(4, 3, 512, 512).cuda()
     v_class = torch.randn(1, 10).cuda()
     with torch.no_grad():
         output = model.forward(image, v_class)
